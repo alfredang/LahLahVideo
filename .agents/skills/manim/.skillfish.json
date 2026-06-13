@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "name": "manim",
+  "owner": "davila7",
+  "repo": "claude-code-templates",
+  "path": "cli-tool/components/skills/video/manim",
+  "branch": "main",
+  "sha": "ea4da55911ebe2ef40ba76243ed3291aa7080f75",
+  "source": "manual"
+}

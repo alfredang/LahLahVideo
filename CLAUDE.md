@@ -44,6 +44,16 @@ Only the Web UI exposes format choice (TikTok 1080x1920 vs YouTube 1920x1080) vi
 
 `server.ts` uses a single module-level `busy` flag — only one generation runs at a time. Don't add per-request state without addressing this.
 
+## Video creation skills
+
+Three project-level skills (installed under [.claude/skills/](.claude/skills/), symlinked from `.agents/skills/`) extend video generation. When the user asks to create a video, **pick the skill that fits the topic** rather than always falling back to the built-in Remotion pipeline:
+
+- **`remotion-best-practices`** — React/Remotion video. This is the **default** and matches the existing pipeline (`TopicVideo` composition, `plan.json`). Use it for the standard topic→script→TTS→render flow, social/explainer clips, and any change to the code in [src/](src/). Reach for it first unless the topic clearly calls for one of the others.
+- **`manim`** — Python/Manim animations. Use when the topic is **mathematical, scientific, or educational** and needs precise, programmatic motion: equations, geometry, graphs, algorithms, physics, 3Blue1Brown-style explainers. Requires `manim>=0.19.0` and `python>=3.8` (separate from the Node pipeline; renders its own MP4).
+- **`hyperframes`** — HTML-based video compositions. Use for **caption/subtitle-heavy or audio-reactive** content: lyric/beat-synced visuals, animated text highlighting (marker sweeps, hand-drawn circles, scribble), scene transitions (wipes, shader crossfades), and TTS voiceover synced to captions. Companion skills `hyperframes-cli` (init/lint/preview/render) and `hyperframes-media` (tts/transcribe/remove-background) cover its CLI workflow.
+
+**Routing heuristic by topic:** math/science/algorithm explainer → `manim`; caption- or music-driven / stylised motion-graphics → `hyperframes`; everything else (general topic videos, the existing pipeline) → `remotion-best-practices`. Load the chosen skill before writing any video code so its conventions are followed. The supporting animation skills also installed (animejs, gsap, css-animations, lottie, three, typegpu, waapi, tailwind) are referenced by hyperframes and generally don't need to be invoked directly.
+
 ## Schemas
 
 [src/types.ts](src/types.ts) defines `ScriptSchema` (LLM output contract) and `PlanSchema` (pipeline→Remotion contract). Both are Zod-validated at boundaries; if you change either, update the prompt in [generateScript.ts](src/pipeline/generateScript.ts) and the consumer in [Video.tsx](src/Video.tsx) accordingly.
