@@ -1,10 +1,11 @@
 name: Release
 
 # Push a tag like v2.0.0 to build the Mac .dmg files and the Windows .exe and attach them
-# to a GitHub Release. Run it by hand (Actions > Release > Run workflow) to build without releasing.
+# to a GitHub Release. Pushes to wip/** or release-test/** branches, or a manual run, build without releasing.
 on:
   push:
     tags: ["v*"]
+    branches: ["wip/**", "release-test/**"]
   workflow_dispatch:
 
 permissions:
