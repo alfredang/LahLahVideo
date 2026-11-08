@@ -1,0 +1,45 @@
+name: Installer smoke test
+
+# Runs the published one-line installers on clean GitHub runners, exactly as learners do,
+# then checks that LahLah Video is installed and running. Start it from the Actions tab after a release.
+on:
+  workflow_dispatch:
+
+jobs:
+  macos:
+    runs-on: macos-latest
+    steps:
+      - name: Dry run
+        run: curl -fsSL https://raw.githubusercontent.com/alfredang/LahLahVideo/main/install/install.sh | bash -s -- --dry-run
+      - name: Install
+        run: curl -fsSL https://raw.githubusercontent.com/alfredang/LahLahVideo/main/install/install.sh | bash
+      - name: App is installed and running
+        run: |
+          APP="/Applications/LahLah Video.app"
+          [ -d "$APP" ] || APP="$HOME/Applications/LahLah Video.app"
+          test -x "$APP/Contents/MacOS/ffmpeg"
+          codesign -dv "$APP" 2>&1 | grep -E "Identifier|Signature"
+          sleep 10
+          pgrep -fl "LahLah Video.app/Contents/MacOS/" || (echo "LahLah Video is not running" && exit 1)
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - name: Dry run
+        shell: powershell
+        run: |
+          $env:LAHLAH_DRY_RUN = '1'
+          irm https://raw.githubusercontent.com/alfredang/LahLahVideo/main/install/install.ps1 | iex
+      - name: Install
+        shell: powershell
+        run: irm https://raw.githubusercontent.com/alfredang/LahLahVideo/main/install/install.ps1 | iex
+      - name: App is installed and running
+        shell: powershell
+        run: |
+          Start-Sleep -Seconds 10
+          $p = Get-Process | Where-Object { $_.Path -like '*LahLah Video*' }
+          $p | Format-Table ProcessName, Id, Path -AutoSize
+          if (-not $p) { throw 'LahLah Video is not running' }
+          $lnk = Join-Path ([Environment]::GetFolderPath('Desktop')) 'LahLah Video.lnk'
+          if (-not (Test-Path $lnk)) { throw 'No desktop shortcut' }
+          Get-ChildItem (Split-Path $p[0].Path) | Format-Table Name, Length -AutoSize
