@@ -1,37 +1,39 @@
 {
-  "name": "videocreation",
-  "version": "1.0.0",
+  "name": "lahlah-video",
+  "productName": "LahLah Video",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
-  "description": "Topic-to-video CLI: Claude writes a script, edge-tts speaks it, Remotion renders it.",
+  "description": "LahLah Video: a simple CapCut-style desktop video editor for Mac and Windows, built for the Claude to Higgsfield to TikTok/YouTube workflow.",
+  "author": "Dr Alfred Ang, Tertiary Infotech Academy",
+  "license": "MIT",
   "scripts": {
-    "dev": "tsx src/server.ts",
-    "studio": "remotion studio src/index.ts",
-    "make-video": "tsx src/pipeline/makeVideo.ts",
-    "render": "remotion render src/index.ts TopicVideo out/video.mp4"
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "tauri": "tauri"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.68.0",
-    "@remotion/animated-emoji": "4.0.451",
-    "@remotion/animation-utils": "^4.0.451",
-    "@remotion/bundler": "^4.0.0",
-    "@remotion/cli": "^4.0.0",
-    "@remotion/enable-scss": "4.0.451",
-    "@remotion/fonts": "4.0.451",
-    "@remotion/gif": "4.0.451",
-    "@remotion/renderer": "^4.0.0",
-    "@remotion/transitions": "^4.0.451",
-    "dotenv": "^16.4.5",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "remotion": "^4.0.0",
-    "zod": "^3.23.8"
+    "@tauri-apps/api": "~2.12.4",
+    "@tauri-apps/plugin-deep-link": "~2.6.3",
+    "@tauri-apps/plugin-dialog": "~2.8.4",
+    "@tauri-apps/plugin-fs": "~2.7.1",
+    "@tauri-apps/plugin-http": "~2.8.3",
+    "@tauri-apps/plugin-opener": "~2.7.2",
+    "@tauri-apps/plugin-shell": "~2.6.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
   },
   "devDependencies": {
-    "@types/node": "^22.9.0",
-    "@types/react": "^18.3.12",
-    "@types/react-dom": "^18.3.1",
-    "tsx": "^4.21.0",
-    "typescript": "^5.6.3"
+    "@tauri-apps/cli": "~2.12.4",
+    "@types/node": "^22.20.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.2.1",
+    "typescript": "~5.9.3",
+    "vite": "^8.3.6",
+    "vitest": "^5.1.0"
   }
 }

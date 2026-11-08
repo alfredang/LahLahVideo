@@ -1,0 +1,20 @@
+{
+  "schema": "lahlah-edit/1",
+  "title": "Kopi & Coins Ep1 - The Rainy-Day Tin",
+  "platform": "tiktok",
+  "aspect": "9:16",
+  "fps": 30,
+  "higgsfield_project": { "name": "Kopi & Coins", "url": "https://higgsfield.ai/" },
+  "clips": [
+    { "id": "S01-SH01", "scene": 1, "shot": 1, "src": "clips/S01-SH01.mp4", "duration": 5.0, "trim_in": 0, "trim_out": 5.0, "transition_in": "cut", "caption": "Ah Ma's secret tin", "voiceover": "Every rainy day, Ah Ma opened the same old biscuit tin." },
+    { "id": "S01-SH02", "scene": 1, "shot": 2, "src": "clips/S01-SH02.mp4", "duration": 5.0, "trim_in": 0.5, "trim_out": 4.5, "transition_in": "crossfade", "voiceover": "Inside: coins she saved from every kopi she skipped." },
+    { "id": "S02-SH01", "scene": 2, "shot": 1, "src": "clips/S02-SH01.mp4", "duration": 5.0, "transition_in": "slide", "caption": "Save first, spend later" }
+  ],
+  "audio": [
+    { "src": "audio/lofi-rain.mp3", "start": 0, "volume": 0.6, "type": "music" }
+  ],
+  "captions": [
+    { "start": 0.0, "end": 2.5, "text": "Every rainy day, Ah Ma opened the same old tin." },
+    { "start": 2.5, "end": 5.0, "text": "Inside: coins from every kopi she skipped." }
+  ]
+}
