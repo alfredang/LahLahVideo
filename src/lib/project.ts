@@ -190,7 +190,7 @@ export function addText(p: Project, content: string, opts: { at?: number; durati
 export function addSticker(p: Project, emoji: string, at = 0) {
   const trackId = firstTrackOfType(p, "overlay")!.id;
   const clip: Clip = { ...baseClip(trackId, Math.max(0, at), 3), type: "sticker", sticker: emoji };
-  clip.transform.y = -0.25;
+  clip.transform.y = 0.05;
   return { project: touch({ ...p, clips: [...p.clips, clip] }), clip };
 }
 

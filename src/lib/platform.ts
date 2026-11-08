@@ -331,7 +331,8 @@ export async function importUrl(url: string, i = 0, origin: MediaItem["origin"] 
     // Browser mode streams straight from the link; export still needs the desktop app.
     const kind = kindOf(url) ?? "video";
     const meta = await loadMeta(url, kind);
-    return { id: uid("med"), name: nameFromUrl(url, null, i), kind, url, ...meta, hasAudio: kind !== "image", origin };
+    const thumb = await browserThumb(url, kind).catch(() => undefined);
+    return { id: uid("med"), name: nameFromUrl(url, null, i), kind, url, ...meta, hasAudio: kind !== "image", thumb, origin };
   }
   const res = await httpFetch(url, { method: "GET" });
   if (!res.ok) throw new Error(`Download failed (${res.status}) for ${url}`);

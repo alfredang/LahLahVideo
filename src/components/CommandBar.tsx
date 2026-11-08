@@ -109,7 +109,7 @@ export function CommandBar() {
         {result && <div className={`cmd-result ${result.ok ? "ok" : "err"}`}>{result.message}</div>}
         {micNote && <div className="cmd-note">{micNote}</div>}
         <div className="cmd-suggest">
-          <span className="muted-label">{q ? "Did you mean" : history.length ? "Recent" : "Try"}</span>
+          <span className="muted-label">{q ? "Suggestions" : history.length ? "Recent" : "Try"}</span>
           {suggestions.map((s) => (
             <button type="button" key={s} onClick={() => run(s)}>
               {s}

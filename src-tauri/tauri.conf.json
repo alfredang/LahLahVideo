@@ -1,0 +1,61 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "LahLah Video",
+  "version": "2.0.0",
+  "identifier": "com.tertiaryinfotech.lahlahvideo",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "LahLah Video",
+        "width": 1440,
+        "height": 900,
+        "minWidth": 1100,
+        "minHeight": 680,
+        "center": true,
+        "dragDropEnabled": true
+      }
+    ],
+    "security": {
+      "csp": null,
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["**", "$HOME/**", "$APPCACHE/**", "$APPDATA/**", "$VIDEO/**", "$DOCUMENT/**", "$DOWNLOAD/**", "$DESKTOP/**"]
+      }
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "publisher": "Tertiary Infotech Academy",
+    "copyright": "Copyright (c) Tertiary Infotech Academy Pte Ltd",
+    "category": "Video",
+    "shortDescription": "Simple video editor for TikTok and YouTube",
+    "longDescription": "LahLah Video is a simple CapCut-style editor for adult learners: import Higgsfield clips, trim, add transitions, text, captions and music, then export MP4 for TikTok or YouTube.",
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"],
+    "externalBin": ["binaries/ffmpeg"],
+    "macOS": {
+      "signingIdentity": "-",
+      "minimumSystemVersion": "11.0"
+    },
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "displayLanguageSelector": false
+      }
+    }
+  },
+  "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": ["lahlahvideo"]
+      }
+    }
+  }
+}

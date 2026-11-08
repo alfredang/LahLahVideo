@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  web:
+    name: Typecheck, tests (with real FFmpeg) and web build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - name: Fetch the same static FFmpeg family the app bundles
+        run: node scripts/fetch-ffmpeg.mjs --target x86_64-unknown-linux-gnu
+      - name: Unit tests + render a sample project through FFmpeg
+        run: LAHLAH_FFMPEG="$PWD/src-tauri/binaries/ffmpeg-x86_64-unknown-linux-gnu" npm test
+      - run: npm run build
+      - name: Install script syntax
+        run: bash -n install/install.sh
+
+  installers-windows:
+    name: PowerShell installer parses
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - shell: pwsh
+        run: |
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile("$PWD\install\install.ps1", [ref]$null, [ref]$errors) | Out-Null
+          if ($errors.Count) { $errors | ForEach-Object { Write-Error $_.ToString() }; exit 1 }
+          Write-Host "install.ps1 parses cleanly (pwsh)"
+      - shell: powershell
+        run: |
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile("$PWD\install\install.ps1", [ref]$null, [ref]$errors) | Out-Null
+          if ($errors.Count) { $errors | ForEach-Object { Write-Error $_.ToString() }; exit 1 }
+          Write-Host "install.ps1 parses cleanly (Windows PowerShell 5.1)"

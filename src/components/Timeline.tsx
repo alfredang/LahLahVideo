@@ -6,7 +6,7 @@ import { addToTimeline, deleteSelected, duplicateSelected, splitHere } from "../
 import { Btn, Icon } from "./ui";
 import { modKey } from "../lib/platform";
 
-const HEAD_W = 132;
+const HEAD_W = 150;
 const TRACK_H: Record<Track["type"], number> = { main: 64, overlay: 44, text: 34, caption: 34, audio: 40 };
 const TYPE_ICON: Record<Track["type"], string> = { main: "media", overlay: "sticker", text: "text", caption: "captions", audio: "music" };
 

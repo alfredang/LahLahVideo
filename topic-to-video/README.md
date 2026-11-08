@@ -1,13 +1,15 @@
 <div align="center">
 
-# Video Creator
+# LahLah Video: topic-to-video mode
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Remotion](https://img.shields.io/badge/Remotion-4.0-purple?logo=react&logoColor=white)](https://www.remotion.dev/)
 [![Claude](https://img.shields.io/badge/Claude-Anthropic-orange?logo=anthropic&logoColor=white)](https://www.anthropic.com/)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
-**Turn any topic into a narrated video with AI-generated scripts, voiceover, and animated scenes.**
+**Type a topic, get a narrated video: Claude writes the script, Edge TTS reads it, Remotion animates it.**
+
+> This folder is the original LahLahVideo pipeline, kept as a mode of [LahLah Video](../README.md). Run it from this folder (`cd topic-to-video`). Drop the MP4 it renders into the LahLah Video editor to trim, caption and export it.
 
 </div>
 
@@ -73,7 +75,7 @@ Video Creator is a topic-to-video pipeline that transforms a simple text prompt 
 ## Project Structure
 
 ```
-videocreation/
+topic-to-video/
 ├── src/
 │   ├── index.ts                 # Remotion entry point
 │   ├── Root.tsx                 # Composition registration
@@ -109,8 +111,8 @@ videocreation/
 
 ```bash
 # Clone the repository
-git clone https://github.com/alfredang/videocreation.git
-cd videocreation
+git clone https://github.com/alfredang/LahLahVideo.git
+cd LahLahVideo/topic-to-video
 
 # Install Node dependencies
 npm install

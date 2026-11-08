@@ -83,12 +83,15 @@ function fitBox(m: MediaItem | undefined, c: Clip, W: number, H: number) {
 
 function filterCss(c: Clip) {
   const a = c.adjust;
-  return `brightness(${1 + a.brightness * 0.6}) contrast(${a.contrast}) saturate(${a.saturation})`;
+  const warm = a.temperature > 0 ? ` sepia(${(a.temperature * 0.45).toFixed(3)})` : a.temperature < 0 ? ` hue-rotate(${(a.temperature * 12).toFixed(1)}deg)` : "";
+  return `brightness(${1 + a.brightness * 0.6}) contrast(${a.contrast}) saturate(${a.saturation})${warm}`;
 }
 
 function MediaEl({ clip, media, active, t, playing, muted, onEl }: { clip: Clip; media: MediaItem; active: boolean; t: number; playing: boolean; muted: boolean; onEl?: (el: HTMLVideoElement | null) => void }) {
   const ref = useRef<HTMLVideoElement>(null);
-  useEffect(() => onEl?.(ref.current), [onEl]);
+  useEffect(() => {
+    onEl?.(ref.current);
+  }, [onEl]);
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -136,7 +139,9 @@ function MainLayer({ p, c, fx, t, playing, muted, W, H, onPick }: { p: Project; 
   const m = p.media.find((x) => x.id === c.mediaId);
   const elRef = useRef<HTMLVideoElement | null>(null);
   const [getEl] = useState(() => () => elRef.current);
-  const [setEl] = useState(() => (el: HTMLVideoElement | null) => (elRef.current = el));
+  const [setEl] = useState(() => (el: HTMLVideoElement | null) => {
+    elRef.current = el;
+  });
   if (!m) return null;
   const local = t - c.start;
   const vs = interpolateKeyframes(c, local);
@@ -183,7 +188,7 @@ function ClipBox({ c, m, vs, box, W, H, fade, children, onPick }: { c: Clip; m?:
         {children}
       </div>
       {a.temperature !== 0 && (
-        <div className="tint" style={{ background: a.temperature > 0 ? `rgba(255,150,40,${a.temperature * 0.28})` : `rgba(40,130,255,${-a.temperature * 0.28})` }} />
+        <div className="tint" style={{ background: a.temperature > 0 ? `rgba(255,140,30,${a.temperature * 0.5})` : `rgba(40,130,255,${-a.temperature * 0.5})` }} />
       )}
       {a.vignette > 0 && <div className="vignette" style={{ background: `radial-gradient(ellipse at center, transparent ${70 - a.vignette * 30}%, rgba(0,0,0,${0.35 + a.vignette * 0.55}) 100%)` }} />}
     </div>

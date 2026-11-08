@@ -1,7 +1,44 @@
-import { importDialog, newProjectAction, openDialog, saveProject } from "../actions";
+import { importDialog, saveProject } from "../actions";
 import { apply, redo, setUI, undo, useStore } from "../lib/store";
 import { modKey } from "../lib/platform";
 import { Btn, Icon } from "./ui";
+import { useEffect, useRef, useState } from "react";
+import { FILE_MENU } from "../lib/menu";
+
+function FileMenu() {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const off = (e: MouseEvent) => !ref.current?.contains(e.target as Node) && setOpen(false);
+    window.addEventListener("mousedown", off);
+    return () => window.removeEventListener("mousedown", off);
+  }, [open]);
+  return (
+    <div className="file-menu" ref={ref}>
+      <button type="button" className="btn ghost" onClick={() => setOpen(!open)} aria-haspopup="menu" aria-expanded={open} title="File menu">
+        <Icon name="folder" size={18} />
+        <span>File</span>
+      </button>
+      {open && (
+        <ul role="menu">
+          {FILE_MENU.map((e, i) =>
+            e === "-" ? (
+              <li key={i} className="sep" />
+            ) : (
+              <li key={e.id}>
+                <button type="button" role="menuitem" onClick={() => (setOpen(false), e.run())}>
+                  {e.label}
+                  {e.hint && <small>{e.hint}</small>}
+                </button>
+              </li>
+            ),
+          )}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 export function Header() {
   const p = useStore((s) => s.project);
@@ -17,6 +54,7 @@ export function Header() {
           LahLah <b>Video</b>
         </span>
       </div>
+      <FileMenu />
       <ol className="steps" aria-label="Three steps">
         <li className={step === 1 ? "on" : "done"}>
           <button type="button" onClick={() => importDialog(undefined, { toTimeline: true })} title="Add videos, photos or music">
@@ -36,8 +74,6 @@ export function Header() {
       </ol>
       <input className="proj-name" value={p.name} aria-label="Video name" title="Rename your video" onChange={(e) => apply((q) => ({ ...q, name: e.target.value }), "name")} />
       <div className="header-actions">
-        <Btn icon="new" tip="New project" onClick={() => newProjectAction()} kind="ghost" />
-        <Btn icon="folder" tip={`Open a project or lahlah-edit.json (${modKey}+O)`} onClick={openDialog} kind="ghost" />
         <Btn icon="save" tip={`Save project (${modKey}+S)`} onClick={() => saveProject()} kind="ghost" className={ui.dirty ? "dirty" : ""} />
         <Btn icon="undo" tip={`Undo (${modKey}+Z)`} onClick={undo} disabled={!canUndo} kind="ghost" />
         <Btn icon="redo" tip={`Redo (${modKey}+Shift+Z)`} onClick={redo} disabled={!canRedo} kind="ghost" />

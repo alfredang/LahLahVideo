@@ -1,12 +1,19 @@
 node_modules/
+dist/
 .env
-out/
-public/scene_*.mp3
-public/scene_*.vtt
-public/plan.json
-public/screenshot.png
-screenshot.png
-.remotion/
+.env.*
+!.env.example
 *.log
 .DS_Store
 .playwright-mcp/
+public/_screens/
+src-tauri/target/
+src-tauri/gen/schemas/
+src-tauri/binaries/ffmpeg-*
+# topic-to-video (Remotion pipeline) outputs
+topic-to-video/node_modules/
+topic-to-video/out/
+topic-to-video/public/scene_*.mp3
+topic-to-video/public/scene_*.vtt
+topic-to-video/public/plan.json
+topic-to-video/.remotion/

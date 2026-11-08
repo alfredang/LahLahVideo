@@ -1,9 +1,9 @@
 {
-  "name": "videocreation",
+  "name": "lahlah-topic-to-video",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Topic-to-video CLI: Claude writes a script, edge-tts speaks it, Remotion renders it.",
+  "description": "LahLah Video topic mode: Claude writes a script, edge-tts speaks it, Remotion renders a narrated MP4.",
   "scripts": {
     "dev": "tsx src/server.ts",
     "studio": "remotion studio src/index.ts",

@@ -41,7 +41,9 @@ function makeStore<T>(initial: T) {
     },
     subscribe(l: Listener) {
       listeners.add(l);
-      return () => listeners.delete(l);
+      return () => {
+        listeners.delete(l);
+      };
     },
   };
 }
