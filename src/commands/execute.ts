@@ -190,7 +190,7 @@ export function execute(cmd: Command): string | undefined {
     case "export": {
       if (cmd.preset === "youtube" && project().aspect !== "16:9") apply((p) => setAspect(p, "16:9"));
       if ((cmd.preset === "tiktok" || cmd.preset === "shorts") && project().aspect !== "9:16") apply((p) => setAspect(p, "9:16"));
-      setUI({ exportOpen: true, exportPreset: cmd.preset, exportQuality: cmd.quality });
+      setUI({ exportOpen: true, exportPreset: cmd.preset, exportQuality: cmd.quality, exportNow: !!cmd.now });
       return;
     }
     case "auto-captions":

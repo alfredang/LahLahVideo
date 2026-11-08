@@ -24,7 +24,7 @@ export type Command =
   | { kind: "scale"; dir: 1 | -1 }
   | { kind: "undo" }
   | { kind: "redo" }
-  | { kind: "export"; preset?: "tiktok" | "shorts" | "youtube"; quality?: "720p" | "1080p" | "4k" }
+  | { kind: "export"; preset?: "tiktok" | "shorts" | "youtube"; quality?: "720p" | "1080p" | "4k"; now?: boolean }
   | { kind: "save" }
   | { kind: "open" }
   | { kind: "fade"; which: "in" | "out" | "both"; duration?: number }
@@ -238,9 +238,10 @@ export function parseCommand(raw: string): ParseResult {
 
   // ----- export -----
   if (/^(export|render|publish|download)\b/.test(s)) {
-    const quality = /\b4 ?k\b|2160/.test(s) ? "4k" : /\b720\b/.test(s) ? "720p" : /\b1080\b/.test(s) ? "1080p" : undefined;
+    const quality = /\b4 ?k\b|2160/.test(s) ? "4k" : /\b720 ?p?\b/.test(s) ? "720p" : /\b1080 ?p?\b/.test(s) ? "1080p" : undefined;
+    const now = /\b(now|right away|immediately|straight away)\b/i.test(original);
     const preset = /tik ?tok|reels?|instagram/.test(s) ? "tiktok" : /shorts?/.test(s) ? "shorts" : /you ?tube|landscape|16 ?: ?9|wide/.test(s) ? "youtube" : undefined;
-    return ok({ kind: "export", preset, quality }, `Export${preset ? ` for ${preset === "youtube" ? "YouTube" : preset === "shorts" ? "YouTube Shorts" : "TikTok"}` : ""}`);
+    return ok({ kind: "export", preset, quality, ...(now ? { now: true } : {}) }, `Export${preset ? ` for ${preset === "youtube" ? "YouTube" : preset === "shorts" ? "YouTube Shorts" : "TikTok"}` : ""}`);
   }
 
   // ----- playback and navigation -----

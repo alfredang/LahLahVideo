@@ -88,6 +88,8 @@ describe("parseCommand", () => {
     expect(cmd("next clip")).toEqual({ kind: "select", which: "next" });
     expect(cmd("export for YouTube in 4K")).toEqual({ kind: "export", preset: "youtube", quality: "4k" });
     expect(cmd("export for YouTube Shorts")).toMatchObject({ kind: "export", preset: "shorts" });
+    expect(cmd("export for TikTok in 720p")).toEqual({ kind: "export", preset: "tiktok", quality: "720p" });
+    expect(cmd("Video, export for TikTok now.")).toEqual({ kind: "export", preset: "tiktok", quality: undefined, now: true });
     expect(cmd("record voice-over")).toEqual({ kind: "record-vo" });
     expect(cmd("rotate 90 degrees")).toEqual({ kind: "rotate", deg: 90 });
     expect(cmd("flip")).toEqual({ kind: "flip", axis: "h" });

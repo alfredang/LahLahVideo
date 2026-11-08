@@ -24,12 +24,21 @@ export function ExportDialog() {
   const job = useRef<ExportJob | null>(null);
   const close = () => {
     if (job.current) return;
-    setUI({ exportOpen: false, exportPreset: undefined, exportQuality: undefined });
+    setUI({ exportOpen: false, exportPreset: undefined, exportQuality: undefined, exportNow: false });
   };
 
   useEffect(() => {
     if (isDesktop) defaultExportDir().then(setDir).catch(() => setDir(""));
   }, []);
+
+  // "export for TikTok now": start as soon as the save folder is known.
+  const autoStarted = useRef(false);
+  useEffect(() => {
+    if (!ui.exportNow || autoStarted.current || !dir) return;
+    autoStarted.current = true;
+    setUI({ exportNow: false });
+    void go();
+  }, [ui.exportNow, dir]);
 
   const size = outputSize(p, quality);
   const total = totalDuration(p);

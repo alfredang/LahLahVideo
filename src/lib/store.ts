@@ -19,6 +19,8 @@ export interface UIState {
   lastSaved?: number;
   exportPreset?: "tiktok" | "shorts" | "youtube";
   exportQuality?: "720p" | "1080p" | "4k";
+  /** Start exporting as soon as the dialog opens ("export for TikTok now"). */
+  exportNow?: boolean;
 }
 
 interface State {
