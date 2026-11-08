@@ -34,7 +34,7 @@ curl -s -H "Authorization: Bearer $KEY" "$URL/v1/status"
 | Method and path | MCP tool | Does |
 |---|---|---|
 | `GET /v1/health` | | Is the app up? Answered without touching the editor. |
-| `GET /v1/status` | `status` | Version, open project (name, file, duration, ratio, canvas, clip and caption counts), recent export jobs. |
+| `GET /v1/status` | `status` | Version, open project (name, file, duration, ratio, canvas, frame rate, clip and caption counts), recent export jobs, and `player` (`playing`, `playhead`, last play/pause events with what triggered them). |
 | `POST /v1/handoff` | `open_handoff` | `{ "path": "/abs/lahlah-edit.json" }` or `{ "json": { "schema": "lahlah-edit/1", … }, "baseDir": "/abs/folder" }`. Opens a hand-off (or a `.lahlah` project); downloads `https://` clips. Returns the timeline. |
 | `POST /v1/clips` | `add_clips` | `{ "sources": ["https://…mp4", "/abs/clip.mov"], "track": "main\|overlay\|music\|voice\|audio\|none", "at": 2.5 }`. Imports in order and places on the timeline. |
 | `POST /v1/commands` | `run_command` | `{ "text": "split at 3 seconds" }`. The command-bar parser; returns `{ ok, command, message, timeline }` or `{ ok: false, error, suggestions }`. |

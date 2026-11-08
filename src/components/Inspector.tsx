@@ -51,7 +51,9 @@ function ClipInspector({ p, c }: { p: Project; c: Clip }) {
     if (request) setUI({ inspectorTab: undefined });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [request]);
-  const t = useClock((x) => x.t);
+  // Follow the playhead only while paused; during playback the panel would re-render every frame.
+  const tPaused = useClock((x) => (x.playing ? -1 : x.t));
+  const t = tPaused < 0 ? clock.get().t : tPaused;
   const local = clamp(t - c.start, 0, c.duration);
   const vs = interpolateKeyframes(c, local);
   const m = p.media.find((x) => x.id === c.mediaId);
@@ -332,7 +334,7 @@ function DetailsModal({ p }: { p: Project }) {
       <span className="field-label">Ratio</span>
       <Seg value={p.aspect} options={(Object.keys(ASPECTS) as AspectId[]).map((id) => ({ id, label: id, tip: ASPECTS[id].hint }))} onChange={(a) => apply((q) => setAspect(q, a))} />
       <span className="field-label">Frame rate</span>
-      <Seg value={String(p.fps)} options={["24", "30", "60"].map((f) => ({ id: f, label: `${f} fps` }))} onChange={(v) => apply((q) => ({ ...q, fps: Number(v) }))} />
+      <Seg value={String(p.fps)} options={["24", "25", "30", "50", "60"].map((f) => ({ id: f, label: `${f} fps` }))} onChange={(v) => apply((q) => ({ ...q, fps: Number(v) }))} />
       <BackgroundPicker p={p} />
       <label className="check" title="Lower the music automatically while a voice-over plays">
         <input type="checkbox" checked={p.ducking} onChange={(e) => apply((q) => ({ ...q, ducking: e.target.checked }))} /> Duck music under voice-over

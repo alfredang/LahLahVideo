@@ -32,6 +32,8 @@ CI (`.github/workflows/ci.yml`) typechecks, tests with a real static FFmpeg, bui
 - Layout follows CapCut desktop conventions (layout only, never its branding): asset panel with a horizontal tab row (top left), Player (centre), Details/inspector (right), timeline (bottom) with the main track and Cover tile.
 - `src-tauri/src/control.rs` + `src/control/`: local API on 127.0.0.1 (random port, key in Settings › API, `control.json` in app data). Routes are defined once in `src/control/protocol.ts` and documented in `docs/openapi.json` / `docs/API.md`; tests check they agree.
 - `mcp/`: the MCP server (stdio) and the Claude Desktop extension (`mcp/bundle/manifest.json`, packed with `npm run bundle`). `cd mcp && npm test`; `node test/e2e.mjs <handoff> <out.mp4>` drives a running app end to end.
+- Player smoothness: the playing main-track video drives the clock (`setMasterClock` in `src/lib/store.ts`); never seek it while playing. WebKit needs every media element unlocked by the Play gesture (`src/lib/mediaUnlock.ts`), so timeline media stays mounted. Measure with `node scripts/measure-player.mjs` (WebKit via Playwright).
+- Frame rate: projects follow their clips (`src/lib/fps.ts`); Higgsfield Seedance clips are 24 fps.
 - `scripts/make_icon.swift`: renders the app icon in the LahLah family style (`swift scripts/make_icon.swift out.png --rounded`, then `npx tauri icon`).
 
 ## Video creation skills

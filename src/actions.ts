@@ -41,6 +41,7 @@ import {
 import { toast } from "./lib/toast";
 import { addRecent, deserialise, safeFileName, serialise } from "./lib/projectio";
 import { captionsOf, checkHandoff, handoffSources, isHandoff, parseSrt, projectFromHandoff, toSrt } from "./lib/handoff";
+import { matchClipFrameRate, snapFps } from "./lib/fps";
 
 /** The clip a command acts on: the selection, else the main-track clip under the playhead. */
 export function targetClip(): Clip | null {
@@ -60,7 +61,13 @@ export function select(id: string | null) {
 
 function addMedia(items: MediaItem[]) {
   if (!items.length) return;
-  apply((p) => touch({ ...p, media: [...p.media, ...items] }));
+  const p = project();
+  // A new project takes the frame rate of its first video, so 24 fps clips stay smooth.
+  const firstVideo = !p.media.some((m) => m.kind === "video") ? items.find((m) => m.kind === "video" && m.fps) : undefined;
+  const rate = snapFps(firstVideo?.fps);
+  const setRate = rate && rate !== p.fps && !p.clips.some((c) => c.type === "video");
+  apply((q) => touch({ ...q, fps: setRate ? rate : q.fps, media: [...q.media, ...items] }));
+  if (setRate) toast(`Project set to ${rate} fps to match ${firstVideo!.name}`, "info", 6000);
 }
 
 export async function importPaths(paths: string[], opts: { toTimeline?: boolean; trackId?: string } = {}) {
@@ -184,8 +191,10 @@ export async function loadHandoff(json: unknown, baseDir?: string) {
     }
   }
   if (!media.size) throw new Error("None of the clips in the hand-off file could be loaded.");
-  const p = projectFromHandoff(h, media);
+  const matched = matchClipFrameRate(projectFromHandoff(h, media));
+  const p = matched.project;
   replaceProject(p);
+  if (matched.to) toast(`Project set to ${matched.to} fps to match your ${media.size > 1 ? "Higgsfield clips" : "clip"} (the hand-off said ${matched.from} fps)`, "info", 7000);
   toast(`Laid out ${clipsOnTrack(p, mainTrack(p).id).length} clips from "${p.name}"`, "ok", 5000);
 }
 

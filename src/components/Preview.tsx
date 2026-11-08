@@ -1,5 +1,5 @@
 import { CSSProperties, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { apply, clock, seek, setUI, togglePlay, useClock, useStore } from "../lib/store";
+import { apply, clock, seek, setMasterClock, setUI, togglePlay, useClock, useStore } from "../lib/store";
 import { Clip, MediaItem, Project, ASPECTS, AspectId } from "../lib/types";
 import {
   canvasSize,
@@ -18,6 +18,8 @@ import { previewImage } from "../lib/raster";
 import { useRecorder } from "../lib/recorder";
 import { Btn, Icon } from "./ui";
 import { EmptyStage } from "./EmptyStage";
+import { registerMedia } from "../lib/mediaUnlock";
+import { toast } from "../lib/toast";
 
 interface Fx {
   opacity: number;
@@ -86,55 +88,166 @@ function filterCss(c: Clip) {
   return `brightness(${1 + a.brightness * 0.6}) contrast(${a.contrast}) saturate(${a.saturation})${warm}`;
 }
 
-function MediaEl({ clip, media, active, t, playing, muted, onEl }: { clip: Clip; media: MediaItem; active: boolean; t: number; playing: boolean; muted: boolean; onEl?: (el: HTMLVideoElement | null) => void }) {
+function MediaEl({
+  clip,
+  media,
+  active,
+  t,
+  playing,
+  muted,
+  onEl,
+  master,
+  parked,
+}: {
+  clip: Clip;
+  media: MediaItem;
+  active: boolean;
+  t: number;
+  playing: boolean;
+  muted: boolean;
+  onEl?: (el: HTMLVideoElement | null) => void;
+  master?: boolean;
+  parked?: boolean;
+}) {
   const ref = useRef<HTMLVideoElement>(null);
+  const starting = useRef(false);
   useEffect(() => {
     onEl?.(ref.current);
   }, [onEl]);
+  useEffect(() => (ref.current ? registerMedia(ref.current) : undefined), []);
+  // The playing main-track video is the clock; everything else follows it.
+  useEffect(() => {
+    if (!master) return;
+    const read = () => {
+      const el = ref.current;
+      if (!el || el.paused || el.seeking || el.readyState < 2) return null;
+      return clip.start + (el.currentTime - clip.inPoint) / clip.speed;
+    };
+    setMasterClock(clip.id, read);
+    return () => setMasterClock(clip.id, null);
+  }, [master, clip.id, clip.start, clip.inPoint, clip.speed]);
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const local = Math.max(0, t - clip.start);
+    const local = Math.min(Math.max(0, t - clip.start), clip.duration);
     const desired = clip.inPoint + local * clip.speed;
-    el.playbackRate = clip.speed;
-    el.muted = muted || clip.muted;
-    el.volume = Math.min(1, clip.volume * fadeFactor(clip, local));
+    el.dataset.active = active && playing ? "1" : "0";
+    // Only touch properties that changed: setting them every frame costs time in WebKit.
+    if (el.playbackRate !== clip.speed) el.playbackRate = clip.speed;
+    const mute = muted || clip.muted;
+    if (el.muted !== mute) el.muted = mute;
+    const vol = Math.min(1, clip.volume * fadeFactor(clip, local));
+    if (Math.abs(el.volume - vol) > 0.01) el.volume = vol;
     if (active && playing) {
-      if (Math.abs(el.currentTime - desired) > 0.3) el.currentTime = desired;
-      if (el.paused) el.play().catch(() => undefined);
+      if (el.paused) {
+        // Start once and let it run: seeking again while play() is pending stalls the decoder.
+        if (starting.current) return;
+        if (!el.seeking && Math.abs(el.currentTime - desired) > 0.25) el.currentTime = desired;
+        starting.current = true;
+        const done = () => (starting.current = false);
+        el.play().then(done, (e: Error) => {
+          // Not unlocked by a click (e.g. playback started from a link): keep the picture moving, muted.
+          if (e?.name === "NotAllowedError" && !el.muted) {
+            el.muted = true;
+            el.play().then(done, done);
+            warnMutedOnce();
+          } else done();
+        });
+        setTimeout(done, 1500);
+      } else if (!el.seeking && Math.abs(el.currentTime - desired) > (master ? 0.6 : 0.35)) {
+        // Followers re-sync on real drift. The master drives the clock, so it is only re-synced
+        // when it has stalled and the clock moved on without it.
+        el.currentTime = desired;
+      }
     } else {
       if (!el.paused) el.pause();
-      if (Math.abs(el.currentTime - desired) > 0.04) el.currentTime = Math.max(0, desired);
+      if (!el.seeking && Math.abs(el.currentTime - desired) > 0.04) el.currentTime = Math.max(0, desired);
     }
   });
-  if (media.kind === "audio") return <audio ref={ref as any} src={media.url} preload="auto" />;
-  return <video ref={ref} src={media.url} preload="auto" playsInline className="media" />;
+  const preload = parked ? "metadata" : "auto";
+  if (media.kind === "audio") return <audio ref={ref as any} src={media.url} preload={preload} />;
+  return <video ref={ref} src={media.url} preload={preload} playsInline className="media" />;
 }
 
-function BlurBackdrop({ get, url, kind }: { get: () => HTMLVideoElement | null; url: string; kind: string }) {
+let warnedMuted = false;
+function warnMutedOnce() {
+  if (warnedMuted) return;
+  warnedMuted = true;
+  toast("Press Play again to hear the clip sound", "info", 5000);
+}
+
+/**
+ * The blurred fill behind a clip: a tiny canvas (36 px wide) redrawn about 12 times a second and
+ * stretched by the GPU. Much cheaper than a CSS blur over a full-size, constantly changing layer.
+ */
+function BlurBackdrop({ get, url, kind, W, H }: { get: () => HTMLVideoElement | null; url: string; kind: string; W: number; H: number }) {
   const cv = useRef<HTMLCanvasElement>(null);
+  const img = useRef<HTMLImageElement | null>(null);
+  const lastDraw = useRef(0);
   const t = useClock((c) => c.t);
+  const cw = 36;
+  const ch = Math.max(16, Math.round((36 * H) / W));
+  const draw = (src: CanvasImageSource, sw: number, sh: number) => {
+    const c = cv.current;
+    const ctx = c?.getContext("2d");
+    if (!c || !ctx || !sw || !sh) return;
+    const s = Math.max(c.width / sw, c.height / sh);
+    try {
+      if ("filter" in ctx) ctx.filter = "blur(1.5px)";
+      ctx.drawImage(src, (c.width - sw * s) / 2, (c.height - sh * s) / 2, sw * s, sh * s);
+      ctx.filter = "none";
+      ctx.fillStyle = "rgba(0,0,0,0.22)";
+      ctx.fillRect(0, 0, c.width, c.height);
+      lastDraw.current = performance.now();
+    } catch {
+      /* frame not ready */
+    }
+  };
+  useEffect(() => {
+    if (kind !== "image") return;
+    const im = new Image();
+    im.onload = () => draw(im, im.naturalWidth, im.naturalHeight);
+    im.src = url;
+    img.current = im;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [url, kind, cw, ch]);
   useEffect(() => {
     if (kind !== "video") return;
+    if (clock.get().playing && performance.now() - lastDraw.current < 80) return;
     const v = get();
-    const c = cv.current;
-    if (!v || !c || v.readyState < 2) return;
-    const ctx = c.getContext("2d");
-    if (!ctx) return;
-    const vw = v.videoWidth || 16;
-    const vh = v.videoHeight || 9;
-    const s = Math.max(c.width / vw, c.height / vh);
-    try {
-      ctx.drawImage(v, (c.width - vw * s) / 2, (c.height - vh * s) / 2, vw * s, vh * s);
-    } catch {
-      /* not ready */
-    }
+    if (v && v.readyState >= 2) draw(v, v.videoWidth, v.videoHeight);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [t, get, kind]);
-  if (kind === "image") return <img className="blur-bg" src={url} alt="" />;
-  return <canvas ref={cv} width={64} height={64} className="blur-bg" />;
+  return <canvas ref={cv} width={cw} height={ch} className="blur-bg" />;
 }
 
-function MainLayer({ p, c, fx, t, playing, muted, W, H, onPick }: { p: Project; c: Clip; fx: Fx; t: number; playing: boolean; muted: boolean; W: number; H: number; onPick: (e: React.PointerEvent, c: Clip) => void }) {
+function MainLayer({
+  p,
+  c,
+  fx,
+  t,
+  playing,
+  muted,
+  W,
+  H,
+  onPick,
+  master,
+  preload,
+  parked,
+}: {
+  p: Project;
+  c: Clip;
+  fx: Fx;
+  t: number;
+  playing: boolean;
+  muted: boolean;
+  W: number;
+  H: number;
+  onPick: (e: React.PointerEvent, c: Clip) => void;
+  master?: boolean;
+  preload?: boolean;
+  parked?: boolean;
+}) {
   const m = p.media.find((x) => x.id === c.mediaId);
   const elRef = useRef<HTMLVideoElement | null>(null);
   const [getEl] = useState(() => () => elRef.current);
@@ -147,17 +260,18 @@ function MainLayer({ p, c, fx, t, playing, muted, W, H, onPick }: { p: Project; 
   const box = fitBox(m, { ...c, transform: { ...c.transform, scale: vs.scale } }, W, H);
   const fade = fadeFactor(c, local);
   const wrap: CSSProperties = {
-    opacity: fx.hidden ? 0 : fx.opacity,
+    opacity: fx.hidden || preload || parked ? 0 : fx.opacity,
+    visibility: preload || parked ? "hidden" : undefined,
     transform: `translateX(${fx.tx}px) scale(${fx.scale})`,
     clipPath: fx.clip,
     filter: fade < 1 ? `brightness(${fade})` : undefined,
   };
   return (
     <div className="main-wrap" style={wrap}>
-      {p.background.type === "blur" ? <BlurBackdrop get={getEl} url={m.url} kind={m.kind} /> : <div className="solid-bg" style={{ background: p.background.color }} />}
+      {p.background.type === "blur" && !preload && !parked ? <BlurBackdrop get={getEl} url={m.url} kind={m.kind} W={W} H={H} /> : <div className="solid-bg" style={{ background: p.background.color }} />}
       <ClipBox c={c} m={m} vs={vs} box={box} W={W} H={H} fade={1} onPick={onPick}>
         {m.kind === "video" ? (
-          <MediaEl clip={c} media={m} active t={t} playing={playing} muted={muted} onEl={setEl} />
+          <MediaEl clip={c} media={m} active={!preload && !parked} t={t} playing={playing} muted={muted} onEl={setEl} master={master} parked={parked} />
         ) : (
           <img className="media" src={m.url} alt="" draggable={false} />
         )}
@@ -218,6 +332,8 @@ export function Preview() {
   const main = clipsOnTrack(p, mainTrack(p).id);
   const { fx, dip } = mainFx(main, t, W);
   const hidden = new Set(p.tracks.filter((x) => x.hidden).map((x) => x.id));
+  // The incoming main-track video (latest start under the playhead) drives the clock.
+  const masterId = main.filter((c) => fx.has(c.id) && c.type === "video" && !hidden.has(c.trackId)).sort((a, b) => b.start - a.start)[0]?.id;
   const mutedTracks = new Set(p.tracks.filter((x) => x.muted).map((x) => x.id));
   const active = (c: Clip) => t >= c.start && t < clipEnd(c);
   const order = [...p.tracks].reverse().filter((x) => x.type === "overlay" || x.type === "caption" || x.type === "text");
@@ -258,9 +374,23 @@ export function Preview() {
         ) : (
           <div className="stage" style={{ width: W, height: H, transform: `translate(-50%, -50%) scale(${scale})` }}>
             {main
-              .filter((c) => fx.has(c.id) && !hidden.has(c.trackId))
+              .filter((c) => !hidden.has(c.trackId))
               .map((c) => (
-                <MainLayer key={c.id} p={p} c={c} fx={fx.get(c.id)!} t={t} playing={playing} muted={recording || mutedTracks.has(c.trackId)} W={W} H={H} onPick={onPick} />
+                <MainLayer
+                  key={c.id}
+                  p={p}
+                  c={c}
+                  fx={fx.get(c.id) ?? { opacity: 0, tx: 0, scale: 1, hidden: true }}
+                  preload={!fx.has(c.id) && c.start > t && c.start - t < 1.5}
+                  parked={!fx.has(c.id) && !(c.start > t && c.start - t < 1.5)}
+                  master={c.id === masterId}
+                  t={t}
+                  playing={playing}
+                  muted={recording || mutedTracks.has(c.trackId)}
+                  W={W}
+                  H={H}
+                  onPick={onPick}
+                />
               ))}
             {dip > 0 && <div className="dip" style={{ opacity: dip }} />}
             {order.flatMap((track) =>
@@ -292,10 +422,11 @@ export function Preview() {
             )}
             {/* Audio-only clips play through hidden elements. */}
             {p.clips
-              .filter((c) => c.type === "audio" && active(c) && !hidden.has(c.trackId))
+              .filter((c) => c.type === "audio" && !hidden.has(c.trackId))
               .map((c) => {
                 const m = p.media.find((x) => x.id === c.mediaId);
-                return m ? <MediaEl key={c.id} clip={c} media={m} active t={t} playing={playing} muted={recording || mutedTracks.has(c.trackId)} /> : null;
+                const on = active(c);
+                return m ? <MediaEl key={c.id} clip={c} media={m} active={on} parked={!on} t={t} playing={playing} muted={recording || mutedTracks.has(c.trackId)} /> : null;
               })}
             {recording && <div className="rec-badge">● REC</div>}
           </div>

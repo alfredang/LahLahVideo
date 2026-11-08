@@ -119,7 +119,7 @@ export function ExportDialog() {
               ]}
             />
             <span className="field-label">Frame rate</span>
-            <Seg value={String(fps)} onChange={(v) => setFps(Number(v))} options={["24", "30", "60"].map((f) => ({ id: f, label: `${f} fps` }))} />
+            <Seg value={String(fps)} onChange={(v) => setFps(Number(v))} options={["24", "25", "30", "50", "60"].map((f) => ({ id: f, label: `${f} fps` }))} />
             <span className="field-label">File name</span>
             <input className="text-field" value={name} onChange={(e) => setName(e.target.value)} disabled={running} />
             <span className="field-label">Save to</span>

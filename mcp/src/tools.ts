@@ -108,7 +108,7 @@ export const TOOLS: ToolDef[] = [
     input: {
       preset: z.enum(EXPORT_PRESET_IDS),
       resolution: z.enum(["720p", "1080p", "4k"]).optional().describe("Default 1080p"),
-      fps: z.union([z.literal(24), z.literal(30), z.literal(60)]).optional(),
+      fps: z.union([z.literal(24), z.literal(25), z.literal(30), z.literal(50), z.literal(60)]).optional().describe("Default: the project rate, which follows the clips"),
       path: z.string().optional().describe("Output .mp4 path. Default: Movies/LahLah Video (Mac) or Videos\\LahLah Video (Windows)"),
     },
     run: async (c, a) => json(await c.call("export", { body: a })),

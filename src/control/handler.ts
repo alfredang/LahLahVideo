@@ -1,6 +1,6 @@
 // Runs local API requests (forwarded by the Rust control server) against the editor.
 // Edits go through apply(), so Claude's changes land in the same undo history as yours.
-import { apply, clock, project, replaceProject, setUI, ui } from "../lib/store";
+import { apply, clock, playerLog, project, replaceProject, setUI, ui } from "../lib/store";
 import { Clip, MediaItem, Project } from "../lib/types";
 import {
   addCaption,
@@ -25,6 +25,7 @@ import { execute } from "../commands/execute";
 import { buildFfmpegArgs, outputSize } from "../export/ffmpeg";
 import { startExport } from "../export/run";
 import { toast } from "../lib/toast";
+import { snapFps } from "../lib/fps";
 import { canvasToPng, drawClip } from "../lib/raster";
 import { API_ROUTES, ApiOperation, EXPORT_PRESET_IDS, ExportJob, ExportPresetId, matchRoute } from "./protocol";
 
@@ -102,6 +103,7 @@ function status() {
       captions: captionsOf(p).length,
     },
     exports: [...jobs.values()].slice(-5),
+    player: { playing: clock.get().playing, playhead: Number(clock.get().t.toFixed(3)), log: playerLog.slice(-8) },
   };
 }
 
@@ -161,7 +163,9 @@ async function addClips(body: any) {
     try {
       const m = /^https?:\/\//i.test(src) ? await importUrl(src, i, "higgsfield") : await mediaFromPath(src);
       if (!m) throw new Error("not a video, image or audio file");
-      apply((p) => touch({ ...p, media: [...p.media, m] }));
+      const before = project();
+      const rate = m.kind === "video" && !before.clips.some((c) => c.type === "video") ? snapFps(m.fps) : undefined;
+      apply((p) => touch({ ...p, fps: rate ?? p.fps, media: [...p.media, m] }));
       if (body.track === "none") {
         added.push({ source: src, mediaId: m.id });
         continue;

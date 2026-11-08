@@ -3,7 +3,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { LahLahClient } from "./client";
 import { TOOLS } from "./tools";
 
-export const VERSION = "1.1.1";
+export const VERSION = "1.1.2";
 
 export function createServer(client = new LahLahClient()) {
   const server = new McpServer(

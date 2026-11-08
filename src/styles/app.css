@@ -213,7 +213,7 @@ input[type="checkbox"], input[type="range"] { accent-color: var(--ember); }
 .stage-wrap { position: relative; overflow: hidden; min-height: 0; }
 .stage { position: absolute; left: 50%; top: 50%; transform-origin: center; background: #000; overflow: hidden; box-shadow: 0 12px 40px rgba(28, 27, 25, 0.25); }
 .main-wrap { position: absolute; inset: 0; overflow: hidden; transform-origin: center; }
-.blur-bg { position: absolute; inset: -6%; width: 112%; height: 112%; object-fit: cover; filter: blur(48px) brightness(0.8); }
+.blur-bg { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: auto; }
 .solid-bg { position: absolute; inset: 0; }
 .clip-box { position: absolute; overflow: hidden; transform-origin: center; touch-action: none; cursor: move; }
 .clip-box.sel::after { content: ""; position: absolute; inset: 0; border: 6px solid var(--ember); pointer-events: none; }
@@ -322,7 +322,7 @@ input[type="checkbox"], input[type="range"] { accent-color: var(--ember); }
 .tl-trans { position: absolute; top: 50%; transform: translateY(-50%); width: 22px; height: 22px; border-radius: var(--radius-badge); border: 1px solid var(--hairline-strong); background: var(--card); color: var(--muted); display: grid; place-items: center; padding: 0; z-index: 4; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15); }
 .tl-trans.on { background: var(--ember); color: var(--ink); border-color: var(--ember); }
 .tl-trans:hover { color: var(--ink); border-color: var(--ember); }
-.tl-playhead { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--ember); z-index: 6; pointer-events: none; }
+.tl-playhead { position: absolute; left: 0; top: 0; bottom: 0; width: 2px; will-change: transform; background: var(--ember); z-index: 6; pointer-events: none; }
 .tl-playhead-cap { position: sticky; top: 0; width: 14px; height: 16px; margin-left: -6px; background: var(--ember); clip-path: polygon(0 0, 100% 0, 100% 60%, 50% 100%, 0 60%); pointer-events: auto; cursor: ew-resize; }
 
 .tl-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; margin: 10px; border: 1.5px dashed var(--hairline-strong); border-radius: var(--radius-md); color: var(--ink); background: var(--card); }

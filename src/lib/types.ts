@@ -14,6 +14,8 @@ export interface MediaItem {
   width?: number;
   height?: number;
   hasAudio?: boolean;
+  /** Frame rate of a video, from the FFmpeg probe (desktop). */
+  fps?: number;
   thumb?: string;
   origin?: "local" | "higgsfield" | "recording" | "demo" | "handoff";
 }

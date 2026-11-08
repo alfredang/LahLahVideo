@@ -3,6 +3,7 @@
 import { useSyncExternalStore } from "react";
 import { Project } from "./types";
 import { newProject, totalDuration } from "./project";
+import { unlockAllMedia } from "./mediaUnlock";
 
 export type LeftTab = "media" | "audio" | "text" | "captions" | "stickers" | "effects" | "transitions" | "filters" | "adjustment" | "templates";
 export type MediaSource = "local" | "claude" | "library";
@@ -143,14 +144,37 @@ export function seek(t: number) {
 
 let raf = 0;
 let lastTick = 0;
+
+/**
+ * While a main-track video plays, its own clock drives the playhead. Following requestAnimationFrame
+ * time instead lets the two drift apart, and every correction is a visible seek (judder).
+ */
+type MasterClock = () => number | null;
+let master: { id: string; read: MasterClock } | null = null;
+export function setMasterClock(id: string, read: MasterClock | null) {
+  if (read) master = { id, read };
+  else if (master?.id === id) master = null;
+}
+
+let lastMaster = { value: -1, at: 0 };
+
 function tick(now: number) {
   const c = clock.get();
   if (!c.playing) return;
-  const dt = (now - lastTick) / 1000;
+  const dt = Math.min(0.1, (now - lastTick) / 1000);
   lastTick = now;
   const end = totalDuration(project());
-  const t = c.t + dt;
+  let t = c.t + dt;
+  const m = master?.read();
+  if (m !== null && m !== undefined) {
+    if (m !== lastMaster.value) lastMaster = { value: m, at: now };
+    const stalled = now - lastMaster.at > 250;
+    // Trust the video when it is close to wall time and still moving (it may pull the playhead
+    // back a few frames once, right after a clip starts). A stalled video must not freeze the clock.
+    if (!stalled && Math.abs(m - t) < 0.25) t = m;
+  }
   if (t >= end) {
+    logPlayer("end", end);
     clock.set({ t: end, playing: false });
     return;
   }
@@ -159,15 +183,28 @@ function tick(now: number) {
 }
 
 export function play() {
+  unlockAllMedia();
   const end = totalDuration(project());
   if (end <= 0) return;
   const c = clock.get();
+  logPlayer("play", c.t);
   clock.set({ t: c.t >= end - 0.05 ? 0 : c.t, playing: true });
   lastTick = performance.now();
   cancelAnimationFrame(raf);
   raf = requestAnimationFrame(tick);
 }
+/** Last few play/stop events, reported by the local API's status (helps diagnose playback). */
+export const playerLog: { at: number; event: string; t: number; from?: string }[] = [];
+function logPlayer(event: string, t: number) {
+  const ev = typeof window !== "undefined" ? (window.event as Event | undefined) : undefined;
+  const target = ev?.target as HTMLElement | undefined;
+  const from = ev ? `${ev.type} on ${target?.tagName?.toLowerCase() ?? "?"}${target?.className ? "." + String(target.className).split(" ")[0] : ""}${ev.isTrusted ? "" : " (synthetic)"}` : new Error().stack?.split("\n").slice(2, 5).map((l) => l.trim().slice(0, 60)).join(" < ");
+  playerLog.push({ at: Date.now(), event, t: Number(t.toFixed(3)), from });
+  if (playerLog.length > 20) playerLog.shift();
+}
+
 export function pause() {
+  logPlayer("pause", clock.get().t);
   cancelAnimationFrame(raf);
   clock.set({ ...clock.get(), playing: false });
 }

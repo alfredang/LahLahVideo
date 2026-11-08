@@ -42,7 +42,6 @@ function snapValue(v: number, pts: number[], zoom: number): number | null {
 export function Timeline() {
   const p = useStore((s) => s.project);
   const ui = useStore((s) => s.ui);
-  const t = useClock((c) => c.t);
   const zoom = ui.zoom;
   const total = totalDuration(p);
   const width = Math.max(1200, (total + 20) * zoom);
@@ -50,15 +49,6 @@ export function Timeline() {
   const [drag, setDrag] = useState<DragState | null>(null);
   const dragRef = useRef<DragState | null>(null);
   dragRef.current = drag;
-  const playing = useClock((c) => c.playing);
-
-  // Keep the playhead in view while playing.
-  useEffect(() => {
-    const el = scroller.current;
-    if (!el || !playing) return;
-    const x = t * zoom + HEAD_W;
-    if (x > el.scrollLeft + el.clientWidth - 60) el.scrollLeft = x - HEAD_W - 40;
-  }, [t, zoom, playing]);
 
   const timeAt = (clientX: number) => {
     const el = scroller.current!;
@@ -242,9 +232,7 @@ export function Timeline() {
           {p.tracks.map((track) => (
             <TrackRow key={track.id} p={p} track={track} zoom={zoom} drag={drag} selectedId={ui.selectedId} startDrag={startDrag} onDrop={onDrop} onBackground={(e) => (setUI({ selectedId: null }), scrub(e))} />
           ))}
-          <div className="tl-playhead" style={{ left: HEAD_W + t * zoom }} onPointerDown={scrub}>
-            <div className="tl-playhead-cap" />
-          </div>
+          <Playhead zoom={zoom} scroller={scroller} onScrub={scrub} />
           {axisX !== null && ui.previewAxis && <div className="tl-axis" style={{ left: axisX }} />}
         </div>
       </div>
@@ -382,6 +370,26 @@ function TrackRow({
           );
         })}
       </div>
+    </div>
+  );
+}
+
+/**
+ * The playhead is the only part of the timeline that moves every frame, so it subscribes to the
+ * clock on its own; the tracks re-render only when the edit changes.
+ */
+function Playhead({ zoom, scroller, onScrub }: { zoom: number; scroller: React.RefObject<HTMLDivElement | null>; onScrub: (e: React.PointerEvent) => void }) {
+  const t = useClock((c) => c.t);
+  const playing = useClock((c) => c.playing);
+  useEffect(() => {
+    const el = scroller.current;
+    if (!el || !playing) return;
+    const x = t * zoom + HEAD_W;
+    if (x > el.scrollLeft + el.clientWidth - 60) el.scrollLeft = x - HEAD_W - 40;
+  }, [t, zoom, playing, scroller]);
+  return (
+    <div className="tl-playhead" style={{ transform: `translateX(${HEAD_W + t * zoom}px)` }} onPointerDown={onScrub}>
+      <div className="tl-playhead-cap" />
     </div>
   );
 }

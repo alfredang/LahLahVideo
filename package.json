@@ -1,7 +1,7 @@
 {
   "name": "lahlah-video",
   "productName": "LahLah Video",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "private": true,
   "type": "module",
   "description": "LahLah Video: a simple CapCut-style desktop video editor for Mac and Windows, built for the Claude to Higgsfield to TikTok/YouTube workflow.",

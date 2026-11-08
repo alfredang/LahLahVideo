@@ -395,10 +395,15 @@ export function parseProgress(line: string): number | null {
 }
 
 /** Parse `ffmpeg -i file` stderr for duration, size and an audio stream. */
-export function parseProbe(stderr: string): { duration?: number; width?: number; height?: number; hasAudio: boolean; hasVideo: boolean } {
+export function parseProbe(stderr: string): { duration?: number; width?: number; height?: number; fps?: number; hasAudio: boolean; hasVideo: boolean } {
   const d = /Duration:\s*(\d+):(\d+):([\d.]+)/.exec(stderr);
   const v = /Stream #[^\n]*Video:[^\n]*?(\d{2,5})x(\d{2,5})/.exec(stderr);
+  // "24 fps" is the average rate; "24 tbr" is FFmpeg's real base rate (ffprobe r_frame_rate). Prefer fps.
+  const line = /Stream #[^\n]*Video:[^\n]*/.exec(stderr)?.[0] ?? "";
+  const f = /([\d.]+)\s*fps/.exec(line) ?? /([\d.]+)(k?)\s*tbr/.exec(line);
+  const fps = f ? Number(f[1]) * (f[2] === "k" ? 1000 : 1) : undefined;
   return {
+    fps: fps && isFinite(fps) && fps > 0 && fps < 1000 ? fps : undefined,
     duration: d ? Number(d[1]) * 3600 + Number(d[2]) * 60 + Number(d[3]) : undefined,
     width: v ? Number(v[1]) : undefined,
     height: v ? Number(v[2]) : undefined,

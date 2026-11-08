@@ -3,7 +3,7 @@
   "manifest_version": "0.3",
   "name": "lahlah-video",
   "display_name": "LahLah Video",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Let Claude drive the LahLah Video editor: open the Higgsfield hand-off, cut, add transitions and captions, and export for TikTok or YouTube.",
   "long_description": "LahLah Video is a free desktop video editor from the makers of LahLah Voice. With this extension Claude can open the lahlah-edit.json that the higgsfield-video skill writes, add Higgsfield clips, run plain-English edits (\"add crossfade\", \"split at 3 seconds\"), check a frame, and export an MP4. It talks only to the LahLah Video app on this computer (127.0.0.1) using the API key the app stores for your user account. Install the app first: https://github.com/alfredang/LahLahVideo#1-minute-install",
   "author": {

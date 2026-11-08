@@ -135,9 +135,11 @@ export async function mediaFromPath(path: string, origin: MediaItem["origin"] = 
   const url = convertFileSrc(path);
   let meta: { duration: number; width?: number; height?: number } = { duration: kind === "image" ? 0 : 5 };
   let hasAudio = kind === "audio";
+  let fps: number | undefined;
   try {
     const pr = await probe(path);
     meta = { duration: kind === "image" ? 0 : pr.duration ?? 5, width: pr.width, height: pr.height };
+    fps = kind === "video" ? pr.fps : undefined;
     hasAudio = pr.hasAudio;
   } catch {
     meta = await loadMeta(url, kind);
@@ -146,7 +148,7 @@ export async function mediaFromPath(path: string, origin: MediaItem["origin"] = 
   let thumb: string | undefined;
   if (kind === "image") thumb = url;
   else if (kind === "video") thumb = await ffmpegThumb(path).catch(() => undefined);
-  return { id: uid("med"), name: baseName(path), kind, path, url, ...meta, hasAudio, thumb, origin };
+  return { id: uid("med"), name: baseName(path), kind, path, url, ...meta, hasAudio, fps, thumb, origin };
 }
 
 // ---------------- FFmpeg sidecar ----------------
