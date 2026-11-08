@@ -178,7 +178,7 @@ npm run build        # web bundle
 npm run tauri build  # installers for this machine
 ```
 
-Tagging `v*` runs [`.github/workflows/release.yml`](.github/workflows/release.yml), which builds the Apple silicon and Intel `.dmg` files and the Windows `.exe` and attaches them to a GitHub Release.
+Pushing a `v*` tag runs [`.github/workflows/release.yml`](.github/workflows/release.yml), which builds the Apple silicon and Intel `.dmg` files and the Windows `.exe` and attaches them to a GitHub Release.
 
 ### Under the hood
 

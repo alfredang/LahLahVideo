@@ -1,6 +1,6 @@
 [package]
 name = "lahlah-video"
-version = "2.0.0"
+version = "1.0.0"
 description = "LahLah Video: a simple CapCut-style video editor for the Claude to Higgsfield to TikTok/YouTube workflow"
 authors = ["Dr Alfred Ang <alfred@tertiaryinfotech.com>"]
 license = "MIT"

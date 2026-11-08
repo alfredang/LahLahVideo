@@ -2,7 +2,7 @@
 #   irm https://raw.githubusercontent.com/alfredang/LahLahVideo/main/install/install.ps1 | iex
 # Dry run (find the download, change nothing):
 #   $env:LAHLAH_DRY_RUN = '1'; irm https://raw.githubusercontent.com/alfredang/LahLahVideo/main/install/install.ps1 | iex
-# Specific version:  $env:LAHLAH_VERSION = 'v2.0.0'; irm ... | iex
+# Specific version:  $env:LAHLAH_VERSION = 'v1.0.0'; irm ... | iex
 
 & {
   $ErrorActionPreference = 'Stop'
