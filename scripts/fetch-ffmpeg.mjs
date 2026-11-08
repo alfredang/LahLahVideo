@@ -79,7 +79,19 @@ function findFile(dir, name) {
 let done = false;
 const primary = `https://github.com/eugeneware/ffmpeg-static/releases/download/${RELEASE}/${PRIMARY[target]}.gz`;
 console.log(`Downloading ${primary}`);
-const gz = await download(primary);
+let gz = await download(primary, 2);
+if (!gz) {
+  // The release CDN link can fail while the API still serves the same file.
+  console.log("Trying the GitHub API asset endpoint");
+  const rel = await fetch(`https://api.github.com/repos/eugeneware/ffmpeg-static/releases/tags/${RELEASE}`, { headers: { Accept: "application/vnd.github+json", ...(process.env.GITHUB_TOKEN ? { Authorization: `Bearer ${process.env.GITHUB_TOKEN}` } : {}) } })
+    .then((r) => (r.ok ? r.json() : null))
+    .catch(() => null);
+  const asset = rel?.assets?.find((a) => a.name === `${PRIMARY[target]}.gz`);
+  if (asset) {
+    const r = await fetch(asset.url, { headers: { Accept: "application/octet-stream" } }).catch(() => null);
+    if (r?.ok) gz = Buffer.from(await r.arrayBuffer());
+  }
+}
 if (gz) {
   writeFileSync(out, gunzipSync(gz));
   done = true;

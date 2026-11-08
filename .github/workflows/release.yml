@@ -51,7 +51,30 @@ jobs:
       - run: npm ci
 
       - name: Bundle FFmpeg as a sidecar
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node scripts/fetch-ffmpeg.mjs --target ${{ matrix.target }}
+
+      # tauri-bundler fetches NSIS from GitHub release links; fetch it through the API first so a
+      # flaky release CDN does not break the Windows build. Tauri skips its own download if present.
+      - name: Pre-fetch the NSIS toolchain
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $tools = Join-Path $env:LOCALAPPDATA 'tauri'
+          if (-not (Test-Path "$tools\NSIS\makensis.exe")) {
+            New-Item -ItemType Directory -Force -Path $tools | Out-Null
+            gh release download nsis-3.13 -R tauri-apps/binary-releases -p 'nsis-3.13.zip' -D $env:RUNNER_TEMP --clobber
+            Expand-Archive "$env:RUNNER_TEMP\nsis-3.13.zip" -DestinationPath $tools -Force
+            Rename-Item "$tools\nsis-3.13" 'NSIS'
+            $add = "$tools\NSIS\Plugins\x86-unicode\additional"
+            New-Item -ItemType Directory -Force -Path $add | Out-Null
+            gh release download nsis_tauri_utils-v0.5.3 -R tauri-apps/nsis-tauri-utils -p 'nsis_tauri_utils.dll' -D $add --clobber
+          }
+          Get-ChildItem "$tools\NSIS" | Select-Object -First 5
 
       - uses: tauri-apps/tauri-action@v0
         env:

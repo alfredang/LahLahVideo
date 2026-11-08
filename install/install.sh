@@ -43,7 +43,20 @@ say "Mac with $LABEL processor"
 if [ "$VERSION" = "latest" ]; then API="https://api.github.com/repos/$REPO/releases/latest"; else API="https://api.github.com/repos/$REPO/releases/tags/$VERSION"; fi
 say "Looking up the $VERSION release of $APP"
 JSON="$(curl -fsSL -H 'Accept: application/vnd.github+json' -H 'User-Agent: lahlah-installer' "$API")" || die "Could not reach GitHub. Check your internet connection and try again."
-URL="$(printf '%s' "$JSON" | grep -o '"browser_download_url": *"[^"]*'"$SUFFIX"'"' | head -n 1 | sed -E 's/.*"(https:[^"]+)"/\1/')"
+# Each asset has a direct link and an API link; the API link still works when release links time out.
+asset() {
+  osascript -l JavaScript -e 'function run(a){const r=JSON.parse(a[0]);const x=(r.assets||[]).find(s=>s.name.endsWith(a[1]));return x?(a[2]==="api"?x.url:x.browser_download_url):""}' "$JSON" "$1" "$2" 2>/dev/null || true
+}
+fetch_asset() { # fetch_asset <suffix> <output>
+  local direct api
+  direct="$(asset "$1" direct)"
+  api="$(asset "$1" api)"
+  [ -n "$direct" ] || return 1
+  curl -fL --retry 2 --progress-bar -o "$2" "$direct" && return 0
+  say "Direct download failed; trying GitHub's API link"
+  curl -fL --retry 2 --progress-bar -H "Accept: application/octet-stream" -o "$2" "$api"
+}
+URL="$(asset "$SUFFIX" direct)"
 TAG="$(printf '%s' "$JSON" | grep -o '"tag_name": *"[^"]*"' | head -n 1 | sed -E 's/.*"([^"]+)"$/\1/')"
 [ -n "$URL" ] || die "The $TAG release has no $SUFFIX file yet. See https://github.com/$REPO/releases"
 say "Found $TAG: $URL"
@@ -70,7 +83,7 @@ cleanup() {
 trap cleanup EXIT
 
 say "Downloading"
-curl -fL --progress-bar -o "$TMP/LahLahVideo.dmg" "$URL" || die "Download failed."
+fetch_asset "$SUFFIX" "$TMP/LahLahVideo.dmg" || die "Download failed. Check your connection, or download the .dmg from https://github.com/$REPO/releases/latest"
 
 say "Opening the disk image"
 MNT="$(hdiutil attach -nobrowse -readonly -noautoopen "$TMP/LahLahVideo.dmg" | awk -F'\t' '/\/Volumes\// {print $NF}' | tail -n 1)"
@@ -103,7 +116,7 @@ if [ "$WITH_CLAUDE" = "1" ]; then
   say "Connecting Claude"
   if [ -d "/Applications/Claude.app" ] || [ -d "$HOME/Applications/Claude.app" ]; then
     mkdir -p "$HOME/Downloads"
-    if curl -fsSL -o "$HOME/Downloads/lahlah-video.mcpb" "$MCPB_URL"; then
+    if fetch_asset "lahlah-video.mcpb" "$HOME/Downloads/lahlah-video.mcpb"; then
       open -a Claude "$HOME/Downloads/lahlah-video.mcpb" || open "$HOME/Downloads/lahlah-video.mcpb" || true
       say "Claude Desktop is showing the LahLah Video extension: click Install."
     else

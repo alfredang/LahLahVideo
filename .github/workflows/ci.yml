@@ -18,6 +18,8 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - name: Fetch the same static FFmpeg family the app bundles
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node scripts/fetch-ffmpeg.mjs --target x86_64-unknown-linux-gnu
       - name: Unit tests + render a sample project through FFmpeg
         run: LAHLAH_FFMPEG="$PWD/src-tauri/binaries/ffmpeg-x86_64-unknown-linux-gnu" npm test

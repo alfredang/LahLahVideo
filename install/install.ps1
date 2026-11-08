@@ -43,7 +43,12 @@
 
   $installer = Join-Path $env:TEMP $asset.name
   Say 'Downloading'
-  Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $installer -UseBasicParsing
+  try {
+    Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $installer -UseBasicParsing
+  } catch {
+    Say 'Direct download failed; trying GitHub''s API link'
+    Invoke-WebRequest -Uri $asset.url -OutFile $installer -UseBasicParsing -Headers @{ 'Accept' = 'application/octet-stream'; 'User-Agent' = 'lahlah-installer' }
+  }
   Unblock-File -Path $installer   # skip the SmartScreen "downloaded from the internet" prompt
 
   Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.ProcessName -in @('lahlah-video', 'LahLah Video') } | Stop-Process -Force -ErrorAction SilentlyContinue
@@ -94,7 +99,9 @@
     Say 'Connecting Claude'
     $mcpb = Join-Path ([Environment]::GetFolderPath('UserProfile')) 'Downloads\lahlah-video.mcpb'
     try {
-      Invoke-WebRequest -Uri $mcpbUrl -OutFile $mcpb -UseBasicParsing
+      $mcpbAsset = $release.assets | Where-Object { $_.name -eq 'lahlah-video.mcpb' } | Select-Object -First 1
+      try { Invoke-WebRequest -Uri $mcpbUrl -OutFile $mcpb -UseBasicParsing }
+      catch { Invoke-WebRequest -Uri $mcpbAsset.url -OutFile $mcpb -UseBasicParsing -Headers @{ 'Accept' = 'application/octet-stream'; 'User-Agent' = 'lahlah-installer' } }
       Start-Process -FilePath $mcpb -ErrorAction Stop
       Say 'Claude Desktop is showing the LahLah Video extension: click Install.'
     } catch {
