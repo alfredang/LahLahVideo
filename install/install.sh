@@ -53,11 +53,25 @@ fetch_asset() { # fetch_asset <suffix> <output>
   local direct api
   direct="$(asset "$1" direct)"
   api="$(asset "$1" api)"
-  [ -n "$direct" ] || return 1
-  curl -fL --retry 2 --progress-bar -o "$2" "$direct" && return 0
-  [ -n "$api" ] || return 1
-  say "Direct download failed; trying GitHub's API link"
-  curl -fL --retry 2 --progress-bar -H "Accept: application/octet-stream" -o "$2" "$api"
+  if [ -n "$direct" ] && curl -fL --retry 2 --progress-bar -o "$2" "$direct"; then return 0; fi
+  if [ -n "$api" ]; then
+    say "Direct download failed; trying GitHub's API link"
+    curl -fL --retry 2 --progress-bar -H "Accept: application/octet-stream" -o "$2" "$api" && return 0
+  fi
+  # Last resort: the GitHub CLI, if it is installed and signed in.
+  if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
+    say "Trying the GitHub CLI (gh release download)"
+    local tag="$TAG" dir
+    [ "$tag" = "latest" ] && tag="$(gh release view -R "$REPO" --json tagName -q .tagName 2>/dev/null || true)"
+    dir="$(mktemp -d)"
+    if gh release download ${tag:+"$tag"} -R "$REPO" -p "*$1" -D "$dir" >/dev/null 2>&1; then
+      local got
+      got="$(find "$dir" -type f -name "*$1" | head -n 1)"
+      if [ -n "$got" ]; then mv "$got" "$2"; rm -rf "$dir"; return 0; fi
+    fi
+    rm -rf "$dir"
+  fi
+  return 1
 }
 if [ -n "$JSON" ]; then
   URL="$(asset "$SUFFIX" direct)"
@@ -116,6 +130,11 @@ mkdir -p "$DEST"
 say "Copying $APP to $DEST"
 rm -rf "$DEST/$APP.app"
 ditto "$SRC_APP" "$DEST/$APP.app"
+
+# Make this copy the one that answers lahlahvideo:// links, even if older copies (a .dmg
+# still mounted, a copy in Downloads) are known to macOS.
+LSREGISTER=/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
+[ -x "$LSREGISTER" ] && "$LSREGISTER" -f "$DEST/$APP.app" >/dev/null 2>&1 || true
 
 # The app is not notarised by Apple yet. Clearing the quarantine flag stops the
 # "cannot be opened because the developer cannot be verified" block.

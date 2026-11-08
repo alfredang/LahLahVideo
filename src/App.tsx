@@ -20,20 +20,19 @@ import { isDesktop, readText, setWindowTitle } from "./lib/platform";
 import { toggleVoiceOver } from "./lib/recorder";
 import { runText } from "./commands/execute";
 import { installNativeMenu } from "./lib/menu";
+import { parseDeepLink } from "./lib/deeplink";
 import { toast } from "./lib/toast";
 
 /** lahlahvideo://command?text=...  or  lahlahvideo://open?file=... */
 export function handleDeepLink(url: string) {
-  const m = /^lahlahvideo:\/\/([^/?#]+)\/?\??(.*)$/i.exec(url.trim());
-  if (!m) return;
-  const params = new URLSearchParams(m[2]);
-  const action = m[1].toLowerCase();
-  if (action === "command" || action === "cmd" || action === "run") {
-    const text = params.get("text") ?? params.get("q") ?? "";
-    if (text) runText(text);
-  } else if (action === "open") {
-    const file = params.get("file") ?? params.get("path");
-    if (file) void openPath(file);
+  const link = parseDeepLink(url);
+  if (link.kind === "command") runText(link.text);
+  else if (link.kind === "open") {
+    toast(`Opening ${link.file.split(/[\\/]/).pop()}…`);
+    void openPath(link.file);
+  } else {
+    console.warn("Ignored link", url);
+    return;
   }
   if (isDesktop) {
     import("@tauri-apps/api/window").then(({ getCurrentWindow }) => {
@@ -176,8 +175,7 @@ function useStartup() {
     let opened = false;
     const done = (async () => {
       if (isDesktop) {
-        void installNativeMenu();
-        void startControlListener();
+        // Links first, so a link that launched the app is never missed.
         try {
           const dl = await import("@tauri-apps/plugin-deep-link");
           await dl.onOpenUrl((urls) => urls.forEach(handleDeepLink));
@@ -189,6 +187,8 @@ function useStartup() {
         } catch (e) {
           console.warn("Deep links unavailable", e);
         }
+        void installNativeMenu();
+        void startControlListener();
       }
       // Browser/dev helper: ?cmd=... runs a command, ?demo=1 or ?handoff=URL loads content.
       const qs = new URLSearchParams(location.search);

@@ -20,7 +20,7 @@ While the app runs with the API on, it writes `control.json`, readable only by y
 { "app": "LahLah Video", "version": "1.1.0", "port": 51234, "baseUrl": "http://127.0.0.1:51234", "apiKey": "llv_…", "pid": 4242 }
 ```
 
-The key itself lives in `api-key` in the same folder (user-only permissions). The app never writes it to a log. Scripts can also set `LAHLAH_VIDEO_API_KEY` and `LAHLAH_VIDEO_URL` (the MCP server honours both).
+`apiKey` and `token` hold the same value: `token` is kept for tools written against the first draft of this file. Both are the bearer key, so treat `control.json` like a password file. On macOS it is created with mode `0600` (owner read/write only), as is `api-key`; on Windows both sit in your own `%APPDATA%` profile. The file exists only while the app runs with **Allow API control** on, and is removed when you quit or switch the API off. The key itself lives in `api-key` in the same folder (user-only permissions). The app never writes it to a log. Scripts can also set `LAHLAH_VIDEO_API_KEY` and `LAHLAH_VIDEO_URL` (the MCP server honours both).
 
 ```bash
 CTL=~/Library/Application\ Support/com.tertiaryinfotech.lahlahvideo/control.json

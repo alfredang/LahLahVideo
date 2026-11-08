@@ -45,7 +45,7 @@ curl -fsSL https://raw.githubusercontent.com/alfredang/LahLahVideo/main/install/
 irm https://raw.githubusercontent.com/alfredang/LahLahVideo/main/install/install.ps1 | iex
 ```
 
-Each script fetches the newest release for your computer, installs it, clears the "unknown developer" block and opens the app. No admin password on Windows. On a Mac it installs to `/Applications` (or `~/Applications` if you can't write there).
+Each script fetches the newest release for your computer (falling back to GitHub's API link, a fixed-name copy, and `gh release download` if GitHub is having a bad day), installs it, clears the "unknown developer" block and opens the app. No admin password on Windows. On a Mac it installs to `/Applications` (or `~/Applications` if you can't write there).
 
 Add `--with-claude` (Mac: `… | bash -s -- --with-claude`; Windows: `$env:LAHLAH_WITH_CLAUDE='1'` first) and the script also connects Claude: it opens the LahLah Video extension in Claude Desktop and registers the MCP server with Claude Code if you have it.
 
@@ -271,6 +271,7 @@ The original LahLahVideo pipeline (type a topic, Claude writes the script, Edge 
 | A Higgsfield link won't download | Use the clip's direct download link (it usually ends in `.mp4`), not the page link. Links can expire; copy a fresh one. |
 | Export failed | The error box shows FFmpeg's last lines. The usual cause is a clip that moved or was deleted after import; re-import it. |
 | Export is slow | 4K takes several times longer than 1080p. TikTok and YouTube Shorts look sharp at 1080p. |
+| `lahlahvideo://` links (from LahLah Voice or Claude) do nothing on a Mac | Another copy of the app (an old `.dmg`, a copy in Downloads) may be answering the links. Re-run the install line, which makes `/Applications/LahLah Video.app` the owner, or run `/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "/Applications/LahLah Video.app"`. |
 | Claude says LahLah Video is not running | Open LahLah Video once, and check **Settings › API › Allow API control** is on. The MCP server reads `control.json` from the app-data folder. |
 | The mic button says speech isn't available | Desktop web views rarely ship a speech service. Dictate into the box with LahLah Voice (Mac) or Win+H (Windows). |
 

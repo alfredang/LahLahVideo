@@ -55,12 +55,26 @@
 
   $installer = Join-Path $env:TEMP $asset.name
   Say 'Downloading'
-  try {
-    Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $installer -UseBasicParsing
-  } catch {
+  $got = $false
+  try { Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $installer -UseBasicParsing; $got = $true } catch { }
+  if (-not $got -and $asset.url -ne $asset.browser_download_url) {
     Say 'Direct download failed; trying GitHub''s API link'
-    Invoke-WebRequest -Uri $asset.url -OutFile $installer -UseBasicParsing -Headers @{ 'Accept' = 'application/octet-stream'; 'User-Agent' = 'lahlah-installer' }
+    try { Invoke-WebRequest -Uri $asset.url -OutFile $installer -UseBasicParsing -Headers @{ 'Accept' = 'application/octet-stream'; 'User-Agent' = 'lahlah-installer' }; $got = $true } catch { }
   }
+  if (-not $got -and (Get-Command gh -ErrorAction SilentlyContinue)) {
+    & gh auth status 2>$null | Out-Null
+    if ($LASTEXITCODE -eq 0) {
+      Say 'Trying the GitHub CLI (gh release download)'
+      $dir = Join-Path $env:TEMP "lahlah-$([guid]::NewGuid().ToString('N'))"
+      New-Item -ItemType Directory -Path $dir | Out-Null
+      $tagArg = if ($release.tag_name -and $release.tag_name -ne 'latest') { @($release.tag_name) } else { @() }
+      & gh release download @tagArg -R $Repo -p '*x64-setup.exe' -D $dir 2>$null
+      $file = Get-ChildItem $dir -Filter '*x64-setup.exe' | Select-Object -First 1
+      if ($file) { Move-Item $file.FullName $installer -Force; $got = $true }
+      Remove-Item $dir -Recurse -Force -ErrorAction SilentlyContinue
+    }
+  }
+  if (-not $got) { throw "Download failed. Check your connection, or download the installer from https://github.com/$Repo/releases/latest" }
   Unblock-File -Path $installer   # skip the SmartScreen "downloaded from the internet" prompt
 
   Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.ProcessName -in @('lahlah-video', 'LahLah Video') } | Stop-Process -Force -ErrorAction SilentlyContinue
