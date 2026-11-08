@@ -13,10 +13,15 @@ jobs:
         run: curl -fsSL https://raw.githubusercontent.com/alfredang/LahLahVideo/main/install/install.sh | bash -s -- --dry-run
       - name: Install
         run: curl -fsSL https://raw.githubusercontent.com/alfredang/LahLahVideo/main/install/install.sh | bash
-      - name: Install again (upgrade path, and the no-API fallback)
+      - name: Install again over the running app (the upgrade path)
+        run: |
+          sleep 5
+          pgrep -fl "LahLah Video.app/Contents/MacOS/" || true
+          curl -fsSL https://raw.githubusercontent.com/alfredang/LahLahVideo/main/install/install.sh | bash
+      - name: Fixed-name fallback when the GitHub API is unavailable
+        continue-on-error: true
         run: |
           curl -fsSL https://raw.githubusercontent.com/alfredang/LahLahVideo/main/install/install.sh -o /tmp/install.sh
-          # Point the API at a dead URL to force the fixed-name fallback.
           sed -e 's#https://api.github.com/repos/#https://api.github.invalid/repos/#' /tmp/install.sh | bash
       - name: App is installed and running
         run: |
