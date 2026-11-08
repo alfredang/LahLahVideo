@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { apply, clock, LeftTab, project, setUI, useStore } from "../lib/store";
+import { apply, clock, LeftTab, project, setUI, store, useStore } from "../lib/store";
 import { MediaItem, TransitionType } from "../lib/types";
 import {
   addCaption,
@@ -15,6 +15,7 @@ import {
   TEXT_PRESET_LABELS,
   TEXT_PRESETS,
   touch,
+  trackAccepts,
   trackOf,
   updateClip,
 } from "../lib/project";
@@ -64,16 +65,52 @@ export function LeftPanel() {
   );
 }
 
+/**
+ * Drag a media card onto a timeline track. Pointer events rather than HTML5 drag-and-drop,
+ * because the desktop window's file-drop handler blocks HTML5 drags on Windows.
+ */
+function startMediaDrag(e: React.PointerEvent, m: MediaItem) {
+  if (e.button !== 0 || (e.target as HTMLElement).closest("button")) return;
+  const x0 = e.clientX;
+  const y0 = e.clientY;
+  let ghost: HTMLDivElement | null = null;
+  const move = (ev: PointerEvent) => {
+    if (!ghost && Math.hypot(ev.clientX - x0, ev.clientY - y0) < 6) return;
+    if (!ghost) {
+      ghost = document.createElement("div");
+      ghost.className = "drag-ghost";
+      ghost.textContent = m.name;
+      document.body.appendChild(ghost);
+    }
+    ghost.style.left = `${ev.clientX + 12}px`;
+    ghost.style.top = `${ev.clientY + 8}px`;
+    document.querySelectorAll(".tl-lane.drop-target").forEach((el) => el.classList.remove("drop-target"));
+    (document.elementFromPoint(ev.clientX, ev.clientY)?.closest("[data-track]") as HTMLElement | null)?.classList.add("drop-target");
+  };
+  const up = (ev: PointerEvent) => {
+    window.removeEventListener("pointermove", move);
+    window.removeEventListener("pointerup", up);
+    document.querySelectorAll(".tl-lane.drop-target").forEach((el) => el.classList.remove("drop-target"));
+    if (!ghost) return;
+    ghost.remove();
+    const lane = document.elementFromPoint(ev.clientX, ev.clientY)?.closest("[data-track]") as HTMLElement | null;
+    if (!lane) return;
+    const p = project();
+    const track = p.tracks.find((t) => t.id === lane.dataset.track);
+    const kind = m.kind === "audio" ? "audio" : m.kind === "image" ? "image" : "video";
+    const at = Math.max(0, (ev.clientX - lane.getBoundingClientRect().left) / store.get().ui.zoom);
+    addToTimeline(m.id, track && trackAccepts(track.type, kind) ? track.id : undefined, at);
+  };
+  window.addEventListener("pointermove", move);
+  window.addEventListener("pointerup", up);
+}
+
 function MediaCard({ m }: { m: MediaItem }) {
   const used = useStore((s) => s.project.clips.some((c) => c.mediaId === m.id));
   return (
     <div
       className="media-card"
-      draggable
-      onDragStart={(e) => {
-        e.dataTransfer.setData("application/x-lahlah-media", m.id);
-        e.dataTransfer.effectAllowed = "copy";
-      }}
+      onPointerDown={(e) => startMediaDrag(e, m)}
       onDoubleClick={() => addToTimeline(m.id)}
       title={`${m.name}\nDrag onto the timeline, or double-click to add at the end`}
     >
@@ -107,7 +144,7 @@ function MediaTab() {
   return (
     <div className="tab">
       <Btn big kind="primary" icon="import" label="Import media" onClick={() => importDialog()} className="wide" />
-      <p className="hint">Drag files onto the window, or click Import. Then drag a card onto the timeline.</p>
+      <p className="hint">Drag files onto the window, or click Import. Then drag a card onto a timeline track, or double-click it.</p>
       {media.length === 0 ? (
         <div className="empty-hint">No media yet. Videos, photos and music you import show up here.</div>
       ) : (
