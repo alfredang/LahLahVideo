@@ -24,15 +24,27 @@
   $version = if ($env:LAHLAH_VERSION) { $env:LAHLAH_VERSION } else { 'latest' }
   $api = if ($version -eq 'latest') { "https://api.github.com/repos/$Repo/releases/latest" } else { "https://api.github.com/repos/$Repo/releases/tags/$version" }
   Say "Looking up the $version release of $App"
-  $release = Invoke-RestMethod -Uri $api -Headers @{ 'User-Agent' = 'lahlah-installer'; 'Accept' = 'application/vnd.github+json' }
-  $asset = $release.assets | Where-Object { $_.name -like '*x64-setup.exe' } | Select-Object -First 1
-  if (-not $asset) { throw "The $($release.tag_name) release has no Windows installer yet. See https://github.com/$Repo/releases" }
-  $sizeMb = [math]::Round($asset.size / 1MB, 1)
+  $headers = @{ 'User-Agent' = 'lahlah-installer'; 'Accept' = 'application/vnd.github+json' }
+  if ($env:GITHUB_TOKEN) { $headers['Authorization'] = "Bearer $($env:GITHUB_TOKEN)" }
+  $release = $null
+  try { $release = Invoke-RestMethod -Uri $api -Headers $headers } catch { }
+  if ($release) {
+    $asset = $release.assets | Where-Object { $_.name -like '*x64-setup.exe' } | Select-Object -First 1
+    if (-not $asset) { throw "The $($release.tag_name) release has no Windows installer yet. See https://github.com/$Repo/releases" }
+  } else {
+    # The GitHub API limits anonymous lookups (60 an hour per network, e.g. a whole classroom).
+    Say "GitHub's release list is busy; using the direct link instead"
+    $base = if ($version -eq 'latest') { "https://github.com/$Repo/releases/latest/download" } else { "https://github.com/$Repo/releases/download/$version" }
+    $release = [pscustomobject]@{ tag_name = $version; assets = @() }
+    $asset = [pscustomobject]@{ name = 'LahLahVideo_x64-setup.exe'; size = 0; browser_download_url = "$base/LahLahVideo_x64-setup.exe"; url = "$base/LahLahVideo_x64-setup.exe" }
+  }
+  $sizeMb = if ($asset.size) { [math]::Round($asset.size / 1MB, 1) } else { '?' }
   Say "Found $($release.tag_name): $($asset.name) ($sizeMb MB)"
   if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { Say 'Windows on ARM: the x64 app runs under Windows emulation.' }
 
-  $mcpbUrl = "https://github.com/$Repo/releases/download/$($release.tag_name)/lahlah-video.mcpb"
-  $mcpTgz = "https://github.com/$Repo/releases/download/$($release.tag_name)/lahlah-video-mcp.tgz"
+  $rel = if ($release.tag_name -eq 'latest') { "https://github.com/$Repo/releases/latest/download" } else { "https://github.com/$Repo/releases/download/$($release.tag_name)" }
+  $mcpbUrl = "$rel/lahlah-video.mcpb"
+  $mcpTgz = "$rel/lahlah-video-mcp.tgz"
   $withClaude = $env:LAHLAH_WITH_CLAUDE -eq '1'
 
   if ($env:LAHLAH_DRY_RUN -eq '1') {
@@ -101,7 +113,10 @@
     try {
       $mcpbAsset = $release.assets | Where-Object { $_.name -eq 'lahlah-video.mcpb' } | Select-Object -First 1
       try { Invoke-WebRequest -Uri $mcpbUrl -OutFile $mcpb -UseBasicParsing }
-      catch { Invoke-WebRequest -Uri $mcpbAsset.url -OutFile $mcpb -UseBasicParsing -Headers @{ 'Accept' = 'application/octet-stream'; 'User-Agent' = 'lahlah-installer' } }
+      catch {
+        if (-not $mcpbAsset) { throw }
+        Invoke-WebRequest -Uri $mcpbAsset.url -OutFile $mcpb -UseBasicParsing -Headers @{ 'Accept' = 'application/octet-stream'; 'User-Agent' = 'lahlah-installer' }
+      }
       Start-Process -FilePath $mcpb -ErrorAction Stop
       Say 'Claude Desktop is showing the LahLah Video extension: click Install.'
     } catch {

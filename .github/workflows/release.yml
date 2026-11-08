@@ -128,11 +128,20 @@ jobs:
           npm pack --pack-destination ../dist-release
           mv ../dist-release/lahlah-video-mcp-*.tgz ../dist-release/lahlah-video-mcp.tgz
           ls -la ../dist-release
-      - name: Attach to the release
+      - name: Attach to the release, plus fixed-name copies of the installers
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload "${{ github.ref_name }}" dist-release/lahlah-video.mcpb dist-release/lahlah-video-mcp.tgz --clobber
+        run: |
+          TAG="${{ github.ref_name }}"
+          gh release upload "$TAG" dist-release/lahlah-video.mcpb dist-release/lahlah-video-mcp.tgz --clobber
+          # releases/latest/download/LahLahVideo_<arch> works without the (rate-limited) API.
+          mkdir -p stable && cd stable
+          gh release download "$TAG" -R "${{ github.repository }}" -p '*_aarch64.dmg' -p '*_x64.dmg' -p '*_x64-setup.exe'
+          for f in *_aarch64.dmg; do cp "$f" LahLahVideo_aarch64.dmg; done
+          for f in *_x64.dmg; do cp "$f" LahLahVideo_x64.dmg; done
+          for f in *_x64-setup.exe; do cp "$f" LahLahVideo_x64-setup.exe; done
+          gh release upload "$TAG" LahLahVideo_aarch64.dmg LahLahVideo_x64.dmg LahLahVideo_x64-setup.exe --clobber
       - name: Keep as build artifacts
         if: ${{ !startsWith(github.ref, 'refs/tags/') }}
         uses: actions/upload-artifact@v4

@@ -42,7 +42,9 @@ say "Mac with $LABEL processor"
 
 if [ "$VERSION" = "latest" ]; then API="https://api.github.com/repos/$REPO/releases/latest"; else API="https://api.github.com/repos/$REPO/releases/tags/$VERSION"; fi
 say "Looking up the $VERSION release of $APP"
-JSON="$(curl -fsSL -H 'Accept: application/vnd.github+json' -H 'User-Agent: lahlah-installer' "$API")" || die "Could not reach GitHub. Check your internet connection and try again."
+AUTH=()
+if [ -n "${GITHUB_TOKEN:-}" ]; then AUTH=(-H "Authorization: Bearer $GITHUB_TOKEN"); fi
+JSON="$(curl -fsSL -H 'Accept: application/vnd.github+json' -H 'User-Agent: lahlah-installer' ${AUTH[@]+"${AUTH[@]}"} "$API" 2>/dev/null || true)"
 # Each asset has a direct link and an API link; the API link still works when release links time out.
 asset() {
   osascript -l JavaScript -e 'function run(a){const r=JSON.parse(a[0]);const x=(r.assets||[]).find(s=>s.name.endsWith(a[1]));return x?(a[2]==="api"?x.url:x.browser_download_url):""}' "$JSON" "$1" "$2" 2>/dev/null || true
@@ -53,19 +55,31 @@ fetch_asset() { # fetch_asset <suffix> <output>
   api="$(asset "$1" api)"
   [ -n "$direct" ] || return 1
   curl -fL --retry 2 --progress-bar -o "$2" "$direct" && return 0
+  [ -n "$api" ] || return 1
   say "Direct download failed; trying GitHub's API link"
   curl -fL --retry 2 --progress-bar -H "Accept: application/octet-stream" -o "$2" "$api"
 }
-URL="$(asset "$SUFFIX" direct)"
-TAG="$(printf '%s' "$JSON" | grep -o '"tag_name": *"[^"]*"' | head -n 1 | sed -E 's/.*"([^"]+)"$/\1/')"
-[ -n "$URL" ] || die "The $TAG release has no $SUFFIX file yet. See https://github.com/$REPO/releases"
+if [ -n "$JSON" ]; then
+  URL="$(asset "$SUFFIX" direct)"
+  TAG="$(printf '%s' "$JSON" | grep -o '"tag_name": *"[^"]*"' | head -n 1 | sed -E 's/.*"([^"]+)"$/\1/')"
+  [ -n "$URL" ] || die "The $TAG release has no $SUFFIX file yet. See https://github.com/$REPO/releases"
+else
+  # The GitHub API limits anonymous lookups (60 an hour per network, e.g. a whole classroom).
+  # Fall back to the fixed-name copy every release carries.
+  say "GitHub's release list is busy; using the direct link instead"
+  if [ "$VERSION" = "latest" ]; then BASE="https://github.com/$REPO/releases/latest/download"; else BASE="https://github.com/$REPO/releases/download/$VERSION"; fi
+  URL="$BASE/LahLahVideo$SUFFIX"
+  TAG="$VERSION"
+  asset() { [ "$2" = "direct" ] && case "$1" in lahlah-video.mcpb) echo "$BASE/lahlah-video.mcpb" ;; *) echo "$BASE/LahLahVideo$1" ;; esac; }
+fi
 say "Found $TAG: $URL"
 
 DEST="/Applications"
 if [ ! -w "$DEST" ]; then DEST="$HOME/Applications"; fi
 
-MCPB_URL="https://github.com/$REPO/releases/download/$TAG/lahlah-video.mcpb"
-MCP_TGZ="https://github.com/$REPO/releases/download/$TAG/lahlah-video-mcp.tgz"
+if [ "$TAG" = "latest" ]; then REL="https://github.com/$REPO/releases/latest/download"; else REL="https://github.com/$REPO/releases/download/$TAG"; fi
+MCPB_URL="$REL/lahlah-video.mcpb"
+MCP_TGZ="$REL/lahlah-video-mcp.tgz"
 
 if [ "$DRY_RUN" = "1" ]; then
   if [ -d "$DEST/$APP.app" ]; then say "Dry run. $APP is already in $DEST; it would be quit and replaced."; fi
