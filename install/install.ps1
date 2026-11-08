@@ -59,16 +59,20 @@
   try { Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $installer -UseBasicParsing; $got = $true } catch { }
   if (-not $got -and $asset.url -ne $asset.browser_download_url) {
     Say 'Direct download failed; trying GitHub''s API link'
-    try { Invoke-WebRequest -Uri $asset.url -OutFile $installer -UseBasicParsing -Headers @{ 'Accept' = 'application/octet-stream'; 'User-Agent' = 'lahlah-installer' }; $got = $true } catch { }
+    $dl = @{ 'Accept' = 'application/octet-stream'; 'User-Agent' = 'lahlah-installer' }
+    if ($env:GITHUB_TOKEN) { $dl['Authorization'] = "Bearer $($env:GITHUB_TOKEN)" }
+    try { Invoke-WebRequest -Uri $asset.url -OutFile $installer -UseBasicParsing -Headers $dl; $got = $true } catch { }
   }
   if (-not $got -and (Get-Command gh -ErrorAction SilentlyContinue)) {
-    & gh auth status 2>$null | Out-Null
+    # cmd /c keeps gh's stderr away from PowerShell, which treats it as an error under 'Stop'.
+    & cmd /c "gh auth status >nul 2>&1"
     if ($LASTEXITCODE -eq 0) {
       Say 'Trying the GitHub CLI (gh release download)'
       $dir = Join-Path $env:TEMP "lahlah-$([guid]::NewGuid().ToString('N'))"
       New-Item -ItemType Directory -Path $dir | Out-Null
       $tagArg = if ($release.tag_name -and $release.tag_name -ne 'latest') { @($release.tag_name) } else { @() }
-      & gh release download @tagArg -R $Repo -p '*x64-setup.exe' -D $dir 2>$null
+      $tagText = ($tagArg -join ' ')
+      & cmd /c "gh release download $tagText -R $Repo -p *x64-setup.exe -D `"$dir`" >nul 2>&1"
       $file = Get-ChildItem $dir -Filter '*x64-setup.exe' | Select-Object -First 1
       if ($file) { Move-Item $file.FullName $installer -Force; $got = $true }
       Remove-Item $dir -Recurse -Force -ErrorAction SilentlyContinue

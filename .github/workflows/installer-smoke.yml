@@ -5,6 +5,10 @@ name: Installer smoke test
 on:
   workflow_dispatch:
 
+# Shared runner IPs hit GitHub's anonymous API limit; learners on their own networks rarely do.
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
 jobs:
   macos:
     runs-on: macos-latest

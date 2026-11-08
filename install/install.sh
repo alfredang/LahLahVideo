@@ -56,7 +56,7 @@ fetch_asset() { # fetch_asset <suffix> <output>
   if [ -n "$direct" ] && curl -fL --retry 2 --progress-bar -o "$2" "$direct"; then return 0; fi
   if [ -n "$api" ]; then
     say "Direct download failed; trying GitHub's API link"
-    curl -fL --retry 2 --progress-bar -H "Accept: application/octet-stream" -o "$2" "$api" && return 0
+    curl -fL --retry 2 --progress-bar -H "Accept: application/octet-stream" ${AUTH[@]+"${AUTH[@]}"} -o "$2" "$api" && return 0
   fi
   # Last resort: the GitHub CLI, if it is installed and signed in.
   if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
