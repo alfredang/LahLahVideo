@@ -60,7 +60,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-say "Downloading (about 40 MB)"
+say "Downloading"
 curl -fL --progress-bar -o "$TMP/LahLahVideo.dmg" "$URL" || die "Download failed."
 
 say "Opening the disk image"
