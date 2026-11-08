@@ -1,0 +1,34 @@
+{
+  "name": "lahlah-video-mcp",
+  "version": "1.1.0",
+  "description": "MCP server that lets Claude drive the LahLah Video editor: open Claude's Higgsfield hand-off, run edit commands, export for TikTok or YouTube.",
+  "license": "MIT",
+  "author": "Dr Alfred Ang, Tertiary Infotech Academy",
+  "homepage": "https://github.com/alfredang/LahLahVideo#use-lahlah-video-from-claude",
+  "type": "module",
+  "bin": {
+    "lahlah-video-mcp": "dist/server.js"
+  },
+  "files": [
+    "dist/server.js",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "esbuild src/server.ts --bundle --platform=node --target=node18 --format=esm --outfile=dist/server.js --banner:js=\"#!/usr/bin/env node\nimport { createRequire as __cr } from 'module'; const require = __cr(import.meta.url);\"",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "bundle": "npm run build && node -e \"const fs=require('fs');fs.mkdirSync('bundle/server',{recursive:true});fs.copyFileSync('dist/server.js','bundle/server/index.js');fs.copyFileSync('../docs/icon.png','bundle/icon.png')\" && mcpb pack bundle ../dist-release/lahlah-video.mcpb"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "@types/node": "^22",
+    "esbuild": "^0.28.2",
+    "typescript": "~5.9.3",
+    "vitest": "^5.1.0",
+    "zod": "^3.25.0",
+    "@anthropic-ai/mcpb": "^2.1.2"
+  }
+}

@@ -14,6 +14,10 @@ import {
   splitAt,
   touch,
   totalDuration,
+  splitClip,
+  updateClip,
+  uid,
+  moveClip,
 } from "./lib/project";
 import {
   baseName,
@@ -31,6 +35,8 @@ import {
   saveTextFile,
   setWindowTitle,
   importUrl,
+  grabFrame,
+  runFfmpeg,
 } from "./lib/platform";
 import { toast } from "./lib/toast";
 import { addRecent, deserialise, safeFileName, serialise } from "./lib/projectio";
@@ -149,7 +155,7 @@ export async function importUrls(text: string): Promise<number> {
 
 // ---------------- projects and hand-off files ----------------
 
-async function loadHandoff(json: unknown, baseDir?: string) {
+export async function loadHandoff(json: unknown, baseDir?: string) {
   const check = checkHandoff(json);
   if (!check.ok) throw new Error(check.error);
   const h = check.handoff;
@@ -310,4 +316,79 @@ export function clearCaptions() {
 
 export function timelineEnd() {
   return totalDuration(project());
+}
+
+/** Freeze frame: hold the frame under the playhead for a few seconds (main track). */
+export async function freezeFrame(seconds = 2) {
+  const p = project();
+  const t = clock.get().t;
+  const c = clipsOnTrack(p, mainTrack(p).id).find((x) => t >= x.start && t < clipEnd(x));
+  const m = c && p.media.find((x) => x.id === c.mediaId);
+  if (!c || !m || m.kind !== "video") {
+    toast("Park the playhead over a video clip on the main track, then try Freeze again", "info");
+    return;
+  }
+  const srcT = c.inPoint + (t - c.start) * c.speed;
+  let frame: MediaItem | null = null;
+  if (isDesktop && m.path) {
+    const out = await joinPath(await cacheDir("frames"), `freeze-${Date.now()}.png`);
+    const h = await runFfmpeg(["-hide_banner", "-y", "-ss", String(srcT), "-i", m.path, "-frames:v", "1", out]);
+    if ((await h.done).code === 0) frame = await mediaFromPath(out, "local");
+  } else {
+    const url = await grabFrame(m.url, srcT);
+    if (url) frame = { id: uid("med"), name: "Freeze frame.png", kind: "image", url, duration: 0, width: m.width, height: m.height, thumb: url, origin: "local" };
+  }
+  if (!frame) {
+    toast("Could not grab that frame", "error");
+    return;
+  }
+  const still = frame;
+  let q = splitClip(p, c.id, t).project;
+  q = touch({ ...q, media: [...q.media, still] });
+  const r = addMediaToTimeline(q, still, { trackId: mainTrack(q).id });
+  q = updateClip(r.project, r.clip.id, { start: t - 0.0001, duration: seconds, transform: structuredClone(c.transform), adjust: { ...c.adjust }, label: "Freeze" });
+  apply(() => q);
+  select(r.clip.id);
+  toast(`Froze the frame for ${seconds} seconds`, "ok");
+}
+
+/** CapCut habit: the round + on a media card adds it at the playhead. */
+export function addAtPlayhead(mediaId: string) {
+  const p = project();
+  const m = p.media.find((x) => x.id === mediaId);
+  if (!m) return;
+  const t = clock.get().t;
+  const r = addMediaToTimeline(p, m, { at: m.kind === "audio" ? t : undefined });
+  let q = r.project;
+  if (m.kind !== "audio") q = moveClip(q, r.clip.id, t);
+  apply(() => q);
+  select(r.clip.id);
+}
+
+/** Reverse a video clip: FFmpeg renders the used part backwards once, so preview and export agree. */
+export async function reverseClip() {
+  const c = targetClip();
+  const p = project();
+  const m = c && p.media.find((x) => x.id === c.mediaId);
+  if (!c || !m || m.kind !== "video") {
+    toast("Select a video clip to reverse", "info");
+    return;
+  }
+  if (!isDesktop || !m.path) {
+    toast("Reverse needs the desktop app", "info");
+    return;
+  }
+  toast("Reversing…");
+  const used = c.duration * c.speed;
+  const out = await joinPath(await cacheDir("reversed"), `${m.name.replace(/\.[^.]+$/, "")}-reversed-${Date.now().toString(36)}.mp4`);
+  const audio = m.hasAudio ? ["-af", "areverse"] : ["-an"];
+  const h = await runFfmpeg(["-hide_banner", "-y", "-ss", String(c.inPoint), "-t", String(used), "-i", m.path, "-vf", "reverse", ...audio, "-c:v", "libx264", "-preset", "veryfast", "-crf", "18", "-c:a", "aac", out]);
+  if ((await h.done).code !== 0) {
+    toast("Could not reverse that clip (very long clips need a lot of memory)", "error", 6000);
+    return;
+  }
+  const rev = await mediaFromPath(out, m.origin);
+  if (!rev) return;
+  apply((q) => updateClip(touch({ ...q, media: [...q.media, rev] }), c.id, { mediaId: rev.id, inPoint: 0, label: `${c.label ?? m.name} (reversed)` }));
+  toast("Reversed", "ok");
 }

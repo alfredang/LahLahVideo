@@ -2,7 +2,8 @@
 #   irm https://raw.githubusercontent.com/alfredang/LahLahVideo/main/install/install.ps1 | iex
 # Dry run (find the download, change nothing):
 #   $env:LAHLAH_DRY_RUN = '1'; irm https://raw.githubusercontent.com/alfredang/LahLahVideo/main/install/install.ps1 | iex
-# Specific version:  $env:LAHLAH_VERSION = 'v1.0.0'; irm ... | iex
+# Specific version:  $env:LAHLAH_VERSION = 'v1.1.0'; irm ... | iex
+# Also connect Claude: $env:LAHLAH_WITH_CLAUDE = '1'; irm ... | iex
 
 & {
   $ErrorActionPreference = 'Stop'
@@ -30,8 +31,13 @@
   Say "Found $($release.tag_name): $($asset.name) ($sizeMb MB)"
   if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { Say 'Windows on ARM: the x64 app runs under Windows emulation.' }
 
+  $mcpbUrl = "https://github.com/$Repo/releases/download/$($release.tag_name)/lahlah-video.mcpb"
+  $mcpTgz = "https://github.com/$Repo/releases/download/$($release.tag_name)/lahlah-video-mcp.tgz"
+  $withClaude = $env:LAHLAH_WITH_CLAUDE -eq '1'
+
   if ($env:LAHLAH_DRY_RUN -eq '1') {
-    Say "Dry run. Would download $($asset.browser_download_url), install it silently for this user, add a desktop shortcut and open it."
+    Say "Dry run. Would download $($asset.browser_download_url), install it silently for this user (replacing any older copy), add a desktop shortcut and open it."
+    if ($withClaude) { Say "Dry run. Would also open $mcpbUrl in Claude Desktop and run: claude mcp add --scope user lahlah-video -- npx -y $mcpTgz" }
     return
   }
 
@@ -41,6 +47,7 @@
   Unblock-File -Path $installer   # skip the SmartScreen "downloaded from the internet" prompt
 
   Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.ProcessName -in @('lahlah-video', 'LahLah Video') } | Stop-Process -Force -ErrorAction SilentlyContinue
+  Start-Sleep -Seconds 1
 
   Say 'Installing (no admin rights needed)'
   $p = Start-Process -FilePath $installer -ArgumentList '/S' -Wait -PassThru
@@ -82,4 +89,25 @@
   Write-Host "LahLah Video $($release.tag_name) is installed and should now be open." -ForegroundColor Green
   Write-Host "  App: $exe"
   Write-Host '  Tip: press Ctrl+K inside the app and type "help" to see what you can say.'
+
+  if ($withClaude) {
+    Say 'Connecting Claude'
+    $mcpb = Join-Path ([Environment]::GetFolderPath('UserProfile')) 'Downloads\lahlah-video.mcpb'
+    try {
+      Invoke-WebRequest -Uri $mcpbUrl -OutFile $mcpb -UseBasicParsing
+      Start-Process -FilePath $mcpb -ErrorAction Stop
+      Say 'Claude Desktop is showing the LahLah Video extension: click Install.'
+    } catch {
+      Say "Could not open the Claude extension automatically. Double-click $mcpb with Claude Desktop installed."
+    }
+    if (Get-Command claude -ErrorAction SilentlyContinue) {
+      if (Get-Command npx -ErrorAction SilentlyContinue) {
+        & claude mcp remove --scope user lahlah-video 2>$null | Out-Null
+        & claude mcp add --scope user lahlah-video -- npx -y $mcpTgz
+        Say 'Claude Code can now use LahLah Video.'
+      } else {
+        Say 'Claude Code found but Node.js is missing; install Node.js 18+ to use the MCP server there.'
+      }
+    }
+  }
 }

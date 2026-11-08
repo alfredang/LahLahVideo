@@ -1,6 +1,6 @@
 // File menu entries, shared by the in-app File button and the native menu bar (desktop).
 import { exportSrt, importDialog, importSrt, newProjectAction, openDialog, saveProject } from "../actions";
-import { setUI } from "./store";
+import { openClaudePanel, setUI } from "./store";
 import { isDesktop, isMac } from "./platform";
 
 export interface MenuEntry {
@@ -23,7 +23,9 @@ export const FILE_MENU: (MenuEntry | "-")[] = [
   { id: "export-srt", label: "Export captions (SRT)…", run: () => void exportSrt() },
   "-",
   { id: "export", label: "Export video…", hint: "Ctrl/Cmd+E", run: () => setUI({ exportOpen: true }) },
-  { id: "capcut", label: "Open in CapCut instead…", run: () => setUI({ leftTab: "higgsfield" }) },
+  { id: "capcut", label: "Open in CapCut instead…", run: openClaudePanel },
+  "-",
+  { id: "settings", label: "Settings and API key…", run: () => setUI({ settingsOpen: true }) },
 ];
 
 /** Native menu bar. Accelerators are left to the in-app keyboard handler so nothing fires twice. */
@@ -44,7 +46,7 @@ export async function installNativeMenu() {
         await Submenu.new({
           text: "LahLah Video",
           items: [
-            await PredefinedMenuItem.new({ item: { About: { name: "LahLah Video", copyright: "Tertiary Infotech Academy" } } }),
+            await PredefinedMenuItem.new({ item: { About: { name: "LahLah Video", copyright: "From the makers of LahLah Voice. Tertiary Infotech Academy." } } }),
             await sep(),
             await PredefinedMenuItem.new({ item: "Hide" }),
             await PredefinedMenuItem.new({ item: "HideOthers" }),
@@ -72,7 +74,10 @@ export async function installNativeMenu() {
     items.push(
       await Submenu.new({
         text: "Help",
-        items: [await MenuItem.new({ id: "help", text: "Voice commands and shortcuts", action: () => setUI({ helpOpen: true }) })],
+        items: [
+          await MenuItem.new({ id: "help", text: "Voice commands and shortcuts", action: () => setUI({ helpOpen: true }) }),
+          await MenuItem.new({ id: "voice", text: "LahLah Voice (dictation for Mac)", action: () => void import("@tauri-apps/plugin-opener").then((o) => o.openUrl("https://alfredang.github.io/lahlahvoiceapp/")) }),
+        ],
       }),
     );
     const menu = await Menu.new({ items });

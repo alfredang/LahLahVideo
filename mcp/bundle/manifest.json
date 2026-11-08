@@ -1,0 +1,98 @@
+{
+  "$schema": "https://raw.githubusercontent.com/anthropics/mcpb/main/dist/mcpb-manifest-v0.3.schema.json",
+  "manifest_version": "0.3",
+  "name": "lahlah-video",
+  "display_name": "LahLah Video",
+  "version": "1.1.0",
+  "description": "Let Claude drive the LahLah Video editor: open the Higgsfield hand-off, cut, add transitions and captions, and export for TikTok or YouTube.",
+  "long_description": "LahLah Video is a free desktop video editor from the makers of LahLah Voice. With this extension Claude can open the lahlah-edit.json that the higgsfield-video skill writes, add Higgsfield clips, run plain-English edits (\"add crossfade\", \"split at 3 seconds\"), check a frame, and export an MP4. It talks only to the LahLah Video app on this computer (127.0.0.1) using the API key the app stores for your user account. Install the app first: https://github.com/alfredang/LahLahVideo#1-minute-install",
+  "author": {
+    "name": "Dr Alfred Ang, Tertiary Infotech Academy",
+    "url": "https://www.tertiarycourses.com.sg"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alfredang/LahLahVideo"
+  },
+  "homepage": "https://github.com/alfredang/LahLahVideo#use-lahlah-video-from-claude",
+  "documentation": "https://github.com/alfredang/LahLahVideo/blob/main/docs/API.md",
+  "support": "https://github.com/alfredang/LahLahVideo/issues",
+  "icon": "icon.png",
+  "server": {
+    "type": "node",
+    "entry_point": "server/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": [
+        "${__dirname}/server/index.js"
+      ]
+    }
+  },
+  "tools": [
+    {
+      "name": "status",
+      "description": "LahLah Video status"
+    },
+    {
+      "name": "open_handoff",
+      "description": "Open a hand-off"
+    },
+    {
+      "name": "add_clips",
+      "description": "Add clips"
+    },
+    {
+      "name": "run_command",
+      "description": "Run an editing command"
+    },
+    {
+      "name": "get_timeline",
+      "description": "Read the timeline"
+    },
+    {
+      "name": "set_captions",
+      "description": "Set captions"
+    },
+    {
+      "name": "export",
+      "description": "Export an MP4"
+    },
+    {
+      "name": "export_status",
+      "description": "Export progress"
+    },
+    {
+      "name": "list_projects",
+      "description": "List projects"
+    },
+    {
+      "name": "save_project",
+      "description": "Save the project"
+    },
+    {
+      "name": "snapshot",
+      "description": "Snapshot a frame"
+    }
+  ],
+  "keywords": [
+    "video",
+    "editor",
+    "higgsfield",
+    "tiktok",
+    "youtube",
+    "capcut"
+  ],
+  "license": "MIT",
+  "privacy_policies": [
+    "https://www.tertiaryinfotech.com/privacy"
+  ],
+  "compatibility": {
+    "platforms": [
+      "darwin",
+      "win32"
+    ],
+    "runtimes": {
+      "node": ">=18.0.0"
+    }
+  }
+}

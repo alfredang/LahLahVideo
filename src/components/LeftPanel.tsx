@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { apply, clock, LeftTab, project, setUI, store, useStore } from "../lib/store";
-import { MediaItem, TransitionType } from "../lib/types";
+import { AspectId, Clip, MediaItem, TransitionType } from "../lib/types";
 import {
   addCaption,
+  addMediaToTimeline,
   addSticker,
+  newProject,
   addText,
   clipsOnTrack,
   fmtTime,
@@ -19,47 +21,58 @@ import {
   trackOf,
   updateClip,
 } from "../lib/project";
-import { addMusic, addToTimeline, clearCaptions, exportSrt, importDialog, importSrt, importUrls, openDialog, targetClip } from "../actions";
+import { addAtPlayhead, addMusic, addToTimeline, clearCaptions, exportSrt, importDialog, importSrt, importUrls, newProjectAction, openDialog, targetClip } from "../actions";
+import { buildDemoProject, libraryMusic } from "../lib/demo";
 import { toggleVoiceOver, useRecorder } from "../lib/recorder";
 import { isDesktop, openExternal, pickFolder, reveal } from "../lib/platform";
 import { autoCaptions, capcutHandover } from "../export/run";
 import { toast } from "../lib/toast";
 import { captionsOf } from "../lib/handoff";
-import { Btn, Icon } from "./ui";
+import { Btn, Icon, Slider } from "./ui";
 import { TransitionGrid } from "./Inspector";
 
 const TABS: { id: LeftTab; label: string; icon: string; tip: string }[] = [
-  { id: "media", label: "Media", icon: "media", tip: "Your imported videos, photos and audio" },
-  { id: "higgsfield", label: "Higgsfield", icon: "link", tip: "Bring in Higgsfield clips or a Claude hand-off file" },
+  { id: "media", label: "Media", icon: "media", tip: "Import videos, photos and music, or bring in Claude and Higgsfield clips" },
   { id: "audio", label: "Audio", icon: "music", tip: "Music, sound effects and voice-over" },
   { id: "text", label: "Text", icon: "text", tip: "Titles and labels" },
+  { id: "captions", label: "Captions", icon: "captions", tip: "Subtitles, SRT files and auto-captions" },
   { id: "stickers", label: "Stickers", icon: "sticker", tip: "Emoji stickers" },
-  { id: "transitions", label: "Transitions", icon: "transition", tip: "Effects between clips" },
+  { id: "effects", label: "Effects", icon: "effects", tip: "Motion effects: zoom, pop in, slide, fades" },
+  { id: "transitions", label: "Transitions", icon: "transition", tip: "Effects between two clips" },
   { id: "filters", label: "Filters", icon: "filter", tip: "Colour looks" },
-  { id: "captions", label: "Captions", icon: "captions", tip: "Subtitles and SRT files" },
+  { id: "adjustment", label: "Adjustment", icon: "sliders", tip: "Brightness, contrast, saturation, temperature, vignette" },
+  { id: "templates", label: "Templates", icon: "new", tip: "Start from a ready-made project" },
 ];
 
 export function LeftPanel() {
   const tab = useStore((s) => s.ui.leftTab);
+  const row = useRef<HTMLElement>(null);
   return (
-    <aside className="left">
-      <nav className="left-tabs">
-        {TABS.map((t) => (
-          <button type="button" key={t.id} className={tab === t.id ? "on" : ""} title={t.tip} onClick={() => setUI({ leftTab: t.id })}>
-            <Icon name={t.icon} size={20} />
-            <span>{t.label}</span>
-          </button>
-        ))}
-      </nav>
+    <aside className="left panel">
+      <div className="left-tabs-wrap">
+        <nav className="left-tabs" aria-label="Assets" ref={row}>
+          {TABS.map((t) => (
+            <button type="button" key={t.id} className={tab === t.id ? "on" : ""} title={t.tip} onClick={() => setUI({ leftTab: t.id })} data-coach={t.id === "media" ? "media" : undefined}>
+              <Icon name={t.icon} size={19} />
+              <span>{t.label}</span>
+            </button>
+          ))}
+        </nav>
+        <button type="button" className="tabs-more" title="More tabs" onClick={() => row.current?.scrollBy({ left: 160, behavior: "smooth" })}>
+          <Icon name="chevronright" size={16} />
+        </button>
+      </div>
       <div className="left-body">
         {tab === "media" && <MediaTab />}
-        {tab === "higgsfield" && <HiggsfieldTab />}
         {tab === "audio" && <AudioTab />}
         {tab === "text" && <TextTab />}
         {tab === "stickers" && <StickerTab />}
+        {tab === "effects" && <EffectsTab />}
         {tab === "transitions" && <TransitionsTab />}
         {tab === "filters" && <FiltersTab />}
+        {tab === "adjustment" && <AdjustmentTab />}
         {tab === "captions" && <CaptionsTab />}
+        {tab === "templates" && <TemplatesTab />}
       </div>
     </aside>
   );
@@ -105,60 +118,188 @@ function startMediaDrag(e: React.PointerEvent, m: MediaItem) {
   window.addEventListener("pointerup", up);
 }
 
-function MediaCard({ m }: { m: MediaItem }) {
+function MediaCard({ m, list }: { m: MediaItem; list?: boolean }) {
   const used = useStore((s) => s.project.clips.some((c) => c.mediaId === m.id));
+  const [scrub, setScrub] = useState<number | null>(null);
   return (
     <div
-      className="media-card"
+      className={`media-card ${list ? "list" : ""}`}
       onPointerDown={(e) => startMediaDrag(e, m)}
       onDoubleClick={() => addToTimeline(m.id)}
-      title={`${m.name}\nDrag onto the timeline, or double-click to add at the end`}
+      title={`${m.name}\nDrag onto the timeline, or click + to add it at the playhead`}
     >
-      <div className={`media-thumb ${m.kind}`} style={m.thumb ? { backgroundImage: `url("${m.thumb}")` } : undefined}>
+      <div
+        className={`media-thumb ${m.kind}`}
+        style={m.thumb ? { backgroundImage: `url("${m.thumb}")` } : undefined}
+        onPointerMove={(e) => {
+          const r = e.currentTarget.getBoundingClientRect();
+          setScrub(Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)));
+        }}
+        onPointerLeave={() => setScrub(null)}
+      >
+        {scrub !== null && m.kind === "video" && (
+          <>
+            <span className="scrub-line" style={{ left: `${scrub * 100}%` }} />
+            <span className="scrub-time">{fmtTime(scrub * m.duration)}</span>
+          </>
+        )}
         {!m.thumb && <Icon name={m.kind === "audio" ? "music" : "media"} size={28} />}
         {m.kind !== "image" && <span className="dur">{fmtTime(m.duration)}</span>}
         {m.origin === "higgsfield" || m.origin === "handoff" ? <span className="badge">HF</span> : null}
         {used && <span className="used" title="On the timeline">✓</span>}
       </div>
       <div className="media-name">{m.name}</div>
-      <div className="media-actions">
-        <button type="button" className="mini add" title="Add to timeline" onClick={() => addToTimeline(m.id)}>
-          <Icon name="plus" size={14} />
+      <button type="button" className="add-plus" title="Add to the timeline at the playhead" onClick={() => addAtPlayhead(m.id)}>
+        <Icon name="plus" size={16} />
+      </button>
+      {!used && (
+        <button type="button" className="remove-x" title="Remove from project" onClick={() => apply((p) => touch({ ...p, media: p.media.filter((x) => x.id !== m.id) }))}>
+          <Icon name="x" size={12} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+function MediaTab() {
+  const source = useStore((s) => s.ui.mediaSource);
+  const [open, setOpen] = useState({ yours: true, claude: true, library: true });
+  const nav = (id: "local" | "claude" | "library", label: string, tip: string) => (
+    <button type="button" className={source === id ? "on" : ""} onClick={() => setUI({ mediaSource: id })} title={tip} data-coach={id === "claude" ? "claude" : undefined}>
+      {label}
+    </button>
+  );
+  return (
+    <div className="media-tab">
+      <nav className="subnav" aria-label="Media sources">
+        <button type="button" className="group" onClick={() => setOpen({ ...open, yours: !open.yours })}>
+          Yours <Icon name={open.yours ? "chevron" : "chevronright"} size={13} />
+        </button>
+        {open.yours && nav("local", "Import", "Videos, photos and music on this computer")}
+        <button type="button" className="group" onClick={() => setOpen({ ...open, claude: !open.claude })}>
+          Claude <Icon name={open.claude ? "chevron" : "chevronright"} size={13} />
+        </button>
+        {open.claude && nav("claude", "From Claude / Higgsfield", "Open Claude's lahlah-edit.json or paste Higgsfield links")}
+        <button type="button" className="group" onClick={() => setOpen({ ...open, library: !open.library })}>
+          Library <Icon name={open.library ? "chevron" : "chevronright"} size={13} />
+        </button>
+        {open.library && nav("library", "Built-in", "A demo project and a royalty-free music loop")}
+      </nav>
+      <div className="media-main">{source === "claude" ? <ClaudePanel /> : source === "library" ? <LibraryPanel /> : <YoursPanel />}</div>
+    </div>
+  );
+}
+
+function YoursPanel() {
+  const media = useStore((s) => s.project.media);
+  const [q, setQ] = useState("");
+  const [view, setView] = useState<"grid" | "list">("grid");
+  const [sort, setSort] = useState<"added" | "name" | "length">("added");
+  const [kind, setKind] = useState<"all" | "video" | "image" | "audio">("all");
+  if (!media.length) {
+    return (
+      <div className="media-empty">
+        <button type="button" className="drop-zone" onClick={() => importDialog()} data-coach="import" title="Import videos, photos or music">
+          <Icon name="plus" size={28} />
+          <b>Import</b>
+          <span>Drag and drop videos, photos and audio files here</span>
+        </button>
+        <p className="muted-label">No media yet? Start with these</p>
+        <div className="create-tiles">
+          <button type="button" onClick={openDialog} title="Open lahlah-edit.json from Claude's higgsfield-video skill">
+            <Icon name="link" size={22} />
+            <b>Open Claude hand-off</b>
+            <small>lahlah-edit.json</small>
+          </button>
+          <button type="button" onClick={() => void toggleVoiceOver()} title="Record from your microphone (R)">
+            <Icon name="mic" size={22} />
+            <b>Record voice-over</b>
+            <small>from your microphone</small>
+          </button>
+        </div>
+      </div>
+    );
+  }
+  let items = media.filter((m) => (kind === "all" || m.kind === kind) && m.name.toLowerCase().includes(q.toLowerCase()));
+  if (sort === "name") items = [...items].sort((a, b) => a.name.localeCompare(b.name));
+  if (sort === "length") items = [...items].sort((a, b) => b.duration - a.duration);
+  return (
+    <div className="yours">
+      <div className="media-toolbar">
+        <Btn icon="plus" label="Import" kind="primary" onClick={() => importDialog()} tip="Import videos, photos or music" />
+        <label className="search" title="Search by file name">
+          <Icon name="search" size={14} />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search material" />
+        </label>
+        <button type="button" className="mini" title={view === "grid" ? "List view" : "Grid view"} onClick={() => setView(view === "grid" ? "list" : "grid")}>
+          <Icon name={view === "grid" ? "list" : "grid"} size={16} />
+        </button>
+        <select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)} title="Sort">
+          <option value="added">Added</option>
+          <option value="name">Name</option>
+          <option value="length">Length</option>
+        </select>
+        <select value={kind} onChange={(e) => setKind(e.target.value as typeof kind)} title="Show">
+          <option value="all">All</option>
+          <option value="video">Video</option>
+          <option value="image">Photos</option>
+          <option value="audio">Audio</option>
+        </select>
+      </div>
+      <div className="crumb">All{kind !== "all" ? ` / ${kind}` : ""}</div>
+      <div className={view === "grid" ? "media-grid" : "media-list"}>
+        {items.map((m) => (
+          <MediaCard key={m.id} m={m} list={view === "list"} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function LibraryPanel() {
+  const [busy, setBusy] = useState(false);
+  return (
+    <div className="tab">
+      <div className="create-tiles">
+        <button
+          type="button"
+          disabled={busy}
+          title="Replace the timeline with a 12-second Kopi & Coins demo"
+          onClick={async () => {
+            setBusy(true);
+            try {
+              newProjectAction(await buildDemoProject());
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          <Icon name="spark" size={22} />
+          <b>Kopi & Coins demo</b>
+          <small>a ready-made 9:16 edit</small>
         </button>
         <button
           type="button"
-          className="mini"
-          title={used ? "Remove its clips from the timeline first" : "Remove from project"}
-          disabled={used}
-          onClick={() => apply((p) => touch({ ...p, media: p.media.filter((x) => x.id !== m.id) }))}
+          title="Add a calm lo-fi loop to the Music track"
+          onClick={async () => {
+            const m = await libraryMusic();
+            const p = touch({ ...project(), media: [...project().media, m] });
+            const music = p.tracks.find((t) => t.type === "audio" && /music/i.test(t.name)) ?? p.tracks.find((t) => t.type === "audio")!;
+            const r = addMediaToTimeline(p, m, { trackId: music.id, at: 0 });
+            apply(() => updateClip(r.project, r.clip.id, { audioRole: "music", volume: 0.5 }));
+            toast("Lo-fi loop added to Music", "ok");
+          }}
         >
-          <Icon name="x" size={14} />
+          <Icon name="music" size={22} />
+          <b>Lo-fi loop</b>
+          <small>12 s, made in the app</small>
         </button>
       </div>
     </div>
   );
 }
 
-function MediaTab() {
-  const media = useStore((s) => s.project.media);
-  return (
-    <div className="tab">
-      <Btn big kind="primary" icon="import" label="Import media" onClick={() => importDialog()} className="wide" />
-      <p className="hint">Drag files onto the window, or click Import. Then drag a card onto a timeline track, or double-click it.</p>
-      {media.length === 0 ? (
-        <div className="empty-hint">No media yet. Videos, photos and music you import show up here.</div>
-      ) : (
-        <div className="media-grid">
-          {media.map((m) => (
-            <MediaCard key={m.id} m={m} />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function HiggsfieldTab() {
+function ClaudePanel() {
   const [links, setLinks] = useState("");
   const [busy, setBusy] = useState("");
   const hf = useStore((s) => s.project.higgsfield);
@@ -167,11 +308,15 @@ function HiggsfieldTab() {
       <div className="flow">
         <span>Claude plans</span>→<span>Higgsfield films</span>→<span className="here">LahLah edits</span>→<span>TikTok / YouTube</span>
       </div>
-      <h3>1 · Paste clip links</h3>
+      <h3>Open Claude's hand-off</h3>
+      <p className="hint">
+        Claude's <code>higgsfield-video</code> skill writes <code>lahlah-edit.json</code>. Open it and every shot lands on the timeline in order, with transitions, captions and music.
+      </p>
+      <Btn kind="primary" big icon="folder" label="Open lahlah-edit.json" className="wide" onClick={openDialog} />
+      <h3>Or paste Higgsfield links</h3>
       <p className="hint">In Higgsfield, open each finished shot, copy its download link, and paste them here in order. One per line.</p>
       <textarea className="text-input" rows={4} placeholder="https://…/S01-SH01.mp4" value={links} onChange={(e) => setLinks(e.target.value)} />
       <Btn
-        kind="primary"
         icon="import"
         label={busy === "links" ? "Fetching…" : "Fetch clips to timeline"}
         disabled={!!busy || !links.trim()}
@@ -185,12 +330,7 @@ function HiggsfieldTab() {
           }
         }}
       />
-      <h3>2 · Or open Claude's hand-off file</h3>
-      <p className="hint">
-        Claude's <code>higgsfield-video</code> skill writes <code>lahlah-edit.json</code>. Open it and LahLah lays out every shot in order, with transitions, captions and music, on the right canvas.
-      </p>
-      <Btn icon="folder" label="Open lahlah-edit.json" className="wide" onClick={openDialog} />
-      <h3>3 · Prefer CapCut?</h3>
+      <h3>Prefer CapCut?</h3>
       <p className="hint">Exports trimmed clips (numbered in order), captions.srt and a how-to into one folder you can drag into CapCut.</p>
       <Btn
         icon="export"
@@ -297,6 +437,36 @@ function StickerTab() {
   );
 }
 
+const EFFECTS: { id: string; label: string; tip: string; apply: (c: Clip) => Partial<Clip> }[] = [
+  { id: "kenburns", label: "Slow zoom", tip: "Ken Burns: 100% to 115% across the clip", apply: (c) => ({ keyframes: [{ t: 0, scale: c.transform.scale }, { t: c.duration, scale: c.transform.scale * 1.15 }] }) },
+  { id: "zoomout", label: "Zoom out", tip: "Starts close, settles back", apply: (c) => ({ keyframes: [{ t: 0, scale: c.transform.scale * 1.2 }, { t: c.duration, scale: c.transform.scale }] }) },
+  { id: "popin", label: "Pop in", tip: "Grows from 60% with a fade, in half a second", apply: (c) => ({ keyframes: [{ t: 0, scale: c.transform.scale * 0.6, opacity: 0 }, { t: Math.min(0.5, c.duration), scale: c.transform.scale, opacity: 1 }] }) },
+  { id: "slideup", label: "Slide up", tip: "Rises into place", apply: (c) => ({ keyframes: [{ t: 0, y: c.transform.y + 0.15, opacity: 0 }, { t: Math.min(0.5, c.duration), y: c.transform.y, opacity: 1 }] }) },
+  { id: "drift", label: "Drift left", tip: "A slow pan from right to left", apply: (c) => ({ keyframes: [{ t: 0, x: c.transform.x + 0.05, scale: Math.max(1.1, c.transform.scale) }, { t: c.duration, x: c.transform.x - 0.05, scale: Math.max(1.1, c.transform.scale) }] }) },
+  { id: "fadein", label: "Fade in", tip: "Half a second from black or clear", apply: (c) => ({ fadeIn: Math.min(0.5, c.duration / 2) }) },
+  { id: "fadeout", label: "Fade out", tip: "Half a second to black or clear", apply: (c) => ({ fadeOut: Math.min(0.5, c.duration / 2) }) },
+  { id: "none", label: "No effect", tip: "Remove motion and fades", apply: () => ({ keyframes: [], fadeIn: 0, fadeOut: 0 }) },
+];
+
+function EffectsTab() {
+  useStore((s) => s.ui.selectedId);
+  const c = targetClip();
+  const ok = c && c.type !== "audio";
+  return (
+    <div className="tab">
+      <p className="hint">{ok ? "Click an effect to apply it to the selected clip." : "Select a clip, text or sticker on the timeline first."}</p>
+      <div className="effect-grid">
+        {EFFECTS.map((e) => (
+          <button type="button" key={e.id} disabled={!ok} title={e.tip} className={`effect fx-${e.id}`} onClick={() => c && apply((q) => updateClip(q, c.id, e.apply(c)))}>
+            <span className="fx-demo" />
+            {e.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function TransitionsTab() {
   const p = useStore((s) => s.project);
   const selectedId = useStore((s) => s.ui.selectedId);
@@ -361,6 +531,64 @@ function FiltersTab() {
           }}
         />
       )}
+    </div>
+  );
+}
+
+function TemplatesTab() {
+  const start = (aspect: AspectId, name: string) => {
+    newProjectAction({ ...newProject(name, aspect) });
+    toast(`New ${aspect} project`, "ok");
+  };
+  return (
+    <div className="tab">
+      <p className="hint">Start fresh on the right canvas, or open the demo to see every tool in use.</p>
+      <div className="create-tiles three">
+        <button type="button" onClick={() => start("9:16", "New TikTok")} title="1080 × 1920">
+          <span className="ratio r9x16" />
+          <b>TikTok / Shorts</b>
+          <small>9:16</small>
+        </button>
+        <button type="button" onClick={() => start("16:9", "New YouTube video")} title="1920 × 1080">
+          <span className="ratio r16x9" />
+          <b>YouTube</b>
+          <small>16:9</small>
+        </button>
+        <button type="button" onClick={() => start("1:1", "New square post")} title="1080 × 1080">
+          <span className="ratio r1x1" />
+          <b>Square</b>
+          <small>1:1</small>
+        </button>
+        <button
+          type="button"
+          onClick={async () => newProjectAction(await buildDemoProject())}
+          title="A 12-second Kopi & Coins edit with transitions, text, captions and music"
+        >
+          <Icon name="spark" size={22} />
+          <b>Kopi & Coins demo</b>
+          <small>9:16, 12 s</small>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function AdjustmentTab() {
+  useStore((s) => s.project);
+  const c = targetClip();
+  const visual = c && (c.type === "video" || c.type === "image") ? c : null;
+  if (!visual) return <div className="tab"><p className="hint">Select a video or photo clip to adjust its colour.</p></div>;
+  const upd = (patch: Partial<Clip["adjust"]>, k: string) => apply((q) => updateClip(q, visual.id, (x) => ({ adjust: { ...x.adjust, ...patch, look: undefined } })), `${visual.id}-adj-${k}`);
+  const a = visual.adjust;
+  const pct = (v: number) => `${Math.round(v * 100)}%`;
+  return (
+    <div className="tab">
+      <Slider label="Brightness" value={a.brightness} min={-0.5} max={0.5} onChange={(v) => upd({ brightness: v }, "br")} format={(v) => (v > 0 ? "+" : "") + Math.round(v * 100)} reset={0} />
+      <Slider label="Contrast" value={a.contrast} min={0.5} max={1.8} onChange={(v) => upd({ contrast: v }, "ct")} format={pct} reset={1} />
+      <Slider label="Saturation" value={a.saturation} min={0} max={2.5} onChange={(v) => upd({ saturation: v }, "sat")} format={pct} reset={1} />
+      <Slider label="Temperature" value={a.temperature} min={-1} max={1} onChange={(v) => upd({ temperature: v }, "temp")} format={(v) => (v > 0 ? "Warm " : v < 0 ? "Cool " : "") + Math.round(Math.abs(v) * 100)} reset={0} />
+      <Slider label="Vignette" value={a.vignette} min={0} max={1} onChange={(v) => upd({ vignette: v }, "vig")} format={pct} reset={0} />
+      <p className="hint">Double-click a slider to reset it.</p>
     </div>
   );
 }

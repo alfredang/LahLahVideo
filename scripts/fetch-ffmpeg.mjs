@@ -49,9 +49,15 @@ if (existsSync(out) && statSync(out).size > 1_000_000 && !process.argv.includes(
 
 const url = `https://github.com/eugeneware/ffmpeg-static/releases/download/${RELEASE}/${asset}.gz`;
 console.log(`Downloading ${url}`);
-const res = await fetch(url);
+let res;
+for (let attempt = 1; attempt <= 5; attempt++) {
+  res = await fetch(url).catch((e) => ({ ok: false, status: String(e) }));
+  if (res.ok) break;
+  console.error(`Download attempt ${attempt} failed: HTTP ${res.status}`);
+  await new Promise((r) => setTimeout(r, attempt * 3000));
+}
 if (!res.ok) {
-  console.error(`Download failed: HTTP ${res.status}`);
+  console.error("Download failed after 5 attempts");
   process.exit(1);
 }
 const bin = gunzipSync(Buffer.from(await res.arrayBuffer()));

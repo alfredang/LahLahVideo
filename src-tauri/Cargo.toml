@@ -1,6 +1,6 @@
 [package]
 name = "lahlah-video"
-version = "1.0.0"
+version = "1.1.0"
 description = "LahLah Video: a simple CapCut-style video editor for the Claude to Higgsfield to TikTok/YouTube workflow"
 authors = ["Dr Alfred Ang <alfred@tertiaryinfotech.com>"]
 license = "MIT"
@@ -25,6 +25,8 @@ tauri-plugin-opener = "~2.7.2"
 tauri-plugin-shell = "~2.6.0"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+tiny_http = "0.12"
+getrandom = "0.3"
 
 [target.'cfg(any(target_os = "macos", windows, target_os = "linux"))'.dependencies]
 tauri-plugin-single-instance = { version = "~2.5.5", features = ["deep-link"] }

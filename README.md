@@ -1,21 +1,23 @@
 <div align="center">
 
-<img src="public/icon.svg" width="96" alt="LahLah Video icon" />
+<img src="docs/icon.png" width="112" alt="LahLah Video icon: a play button in an ember ring, beside timeline clips" />
 
 # LahLah Video
 
 **Your Higgsfield clips, cut into a TikTok in ten minutes. Say "split here" and it splits.**
 
-A free, CapCut-style video editor for Mac and Windows, built for the WSQ course *Agentic AI for Video Creation* by Tertiary Infotech Academy.
+A free, CapCut-style video editor for Mac and Windows, from the makers of [LahLah Voice](https://github.com/alfredang/lahlahvoiceapp). Built for the WSQ course *Agentic AI for Video Creation* by Tertiary Infotech Academy. Claude can drive it too.
 
-[![Release](https://img.shields.io/github/v/release/alfredang/LahLahVideo?label=download&color=ff4f7b)](https://github.com/alfredang/LahLahVideo/releases/latest)
+[![Release](https://img.shields.io/github/v/release/alfredang/LahLahVideo?label=download&color=e8743b)](https://github.com/alfredang/LahLahVideo/releases/latest)
 [![CI](https://github.com/alfredang/LahLahVideo/actions/workflows/ci.yml/badge.svg)](https://github.com/alfredang/LahLahVideo/actions/workflows/ci.yml)
 ![Mac and Windows](https://img.shields.io/badge/Mac%20%7C%20Windows-desktop-2dd4bf)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 </div>
 
-![LahLah Video editing a Kopi & Coins episode: Higgsfield clips on the timeline, captions, a coffee sticker and the Kopi Warm look](docs/screenshot-editor.png)
+![LahLah Video: media bin on the left, player in the middle, Details on the right, timeline below, with a Kopi & Coins edit loaded from Claude's hand-off](docs/screenshot-editor.png)
+
+If you have used CapCut you already know the layout: **Media and effects** top left, the **Player** in the middle, **Details** for the selected clip on the right, the **timeline** along the bottom, and one orange **Export** button. Everything runs on your computer.
 
 ## Where LahLah Video fits
 
@@ -45,6 +47,8 @@ irm https://raw.githubusercontent.com/alfredang/LahLahVideo/main/install/install
 
 Each script fetches the newest release for your computer, installs it, clears the "unknown developer" block and opens the app. No admin password on Windows. On a Mac it installs to `/Applications` (or `~/Applications` if you can't write there).
 
+Add `--with-claude` (Mac: `… | bash -s -- --with-claude`; Windows: `$env:LAHLAH_WITH_CLAUDE='1'` first) and the script also connects Claude: it opens the LahLah Video extension in Claude Desktop and registers the MCP server with Claude Code if you have it.
+
 Want to check first? `curl -fsSL https://raw.githubusercontent.com/alfredang/LahLahVideo/main/install/install.sh | bash -s -- --dry-run` prints the exact download without installing anything. On Windows: `$env:LAHLAH_DRY_RUN='1'` before the `irm` line.
 
 ### Install with Claude
@@ -72,8 +76,8 @@ The app is not yet signed with paid Apple and Microsoft certificates, so both sy
 
 | | |
 |---|---|
-| **Bring clips in** | Drag and drop videos, photos and music, or click Import. Paste Higgsfield download links to pull shots straight onto the timeline. Open a `lahlah-edit.json` hand-off from Claude (**File → Open edit…**). |
-| **Cut on a real timeline** | Main video track that snaps clips end to end, overlay tracks for picture-in-picture, a text track, a captions track and two audio tracks. Drag to move or reorder, drag edges to trim, **S** to split at the playhead, Delete and ripple delete, duplicate, snapping, zoom, undo and redo. |
+| **Bring clips in** | Drag and drop videos, photos and music, or click Import; the round **+** on a card drops it at the playhead. Paste Higgsfield download links to pull shots straight onto the timeline. Open a `lahlah-edit.json` hand-off from Claude (**File → Open edit…**). |
+| **Cut on a real timeline** | Main video track (with a Cover tile) that snaps clips end to end, overlay, text and captions tracks above, audio below. Drag to move or reorder, drag edges to trim, **S** to split, Delete and ripple delete, duplicate, freeze frame, reverse, mirror, rotate, crop, snapping, a hover preview axis, zoom, undo and redo. Right-click a clip for more. |
 | **Pick the right shape** | 9:16 for TikTok, Shorts and Reels; 16:9 for YouTube; 1:1; 4:5. Fill the empty space with a blurred copy of the clip or a solid colour. |
 | **Move and style each clip** | Drag it on the preview. Position, size, rotate, flip, crop, opacity, speed from 0.25× to 4×, volume, mute, fade in and out, and keyframes for position, size and opacity (plus one-click Ken Burns zoom, Pop in, Slide up). |
 | **Join shots** | Cut, crossfade, slide, zoom, wipe and dip to black, between any two clips or across the whole video in one click. |
@@ -83,18 +87,78 @@ The app is not yet signed with paid Apple and Microsoft certificates, so both sy
 | **Stickers** | 24 emoji stickers, from 🔥 to 🇸🇬. |
 | **Export** | MP4 (H.264 + AAC) at 720p, 1080p or 4K and 24, 30 or 60 fps, with TikTok, YouTube Shorts and YouTube 16:9 presets and a progress bar. Files land in `Movies/LahLah Video` (Mac) or `Videos\LahLah Video` (Windows) unless you pick another folder. |
 | **Projects** | Save and open `.lahlah` files, automatic save while you work, and recent projects on the start screen. |
-| **Try it first** | **Try the demo** builds a 12-second *Kopi & Coins* edit with transitions, text, captions, a sticker and music, so you can practise before your own clips arrive. |
+| **Effects and templates** | Motion effects (slow zoom, zoom out, pop in, slide up, drift, fades) and starter templates for TikTok, YouTube and square posts. |
+| **Try it first** | **Templates › Kopi & Coins demo** builds a 12-second *Kopi & Coins* edit with transitions, text, captions, a sticker and music, so you can practise before your own clips arrive. |
+
+## Use LahLah Video from Claude
+
+LahLah Video ships an MCP server, so Claude can open your hand-off, make edits, look at a frame and export, while you watch the timeline change. Every edit goes into the undo history.
+
+**Claude Desktop (one click):** download [`lahlah-video.mcpb`](https://github.com/alfredang/LahLahVideo/releases/latest/download/lahlah-video.mcpb) and double-click it. Claude Desktop shows the LahLah Video extension; click **Install**. (Settings › Extensions lists it afterwards.)
+
+**Claude Code:**
+
+```bash
+claude mcp add lahlah-video -- npx -y https://github.com/alfredang/LahLahVideo/releases/latest/download/lahlah-video-mcp.tgz
+```
+
+**Any MCP client** (`claude_desktop_config.json` or similar, Node.js 18+):
+
+```json
+{
+  "mcpServers": {
+    "lahlah-video": {
+      "command": "npx",
+      "args": ["-y", "https://github.com/alfredang/LahLahVideo/releases/latest/download/lahlah-video-mcp.tgz"]
+    }
+  }
+}
+```
+
+The server finds the running app through `control.json` and starts LahLah Video if it is closed. Turn access off any time in **Settings › API**.
+
+| Tool | What Claude can do |
+|---|---|
+| `status` | See the app version, open project, duration, canvas and recent exports |
+| `open_handoff` | Open `lahlah-edit.json` (path or inline JSON): every Higgsfield shot lands in order |
+| `add_clips` | Download Higgsfield result URLs or import files onto a track |
+| `run_command` | Any command-bar edit: "add crossfade", "split at 3 seconds", "undo" |
+| `get_timeline` | Read tracks, clips, captions and timings as JSON |
+| `set_captions` | Replace the captions from SRT text or a list |
+| `export` / `export_status` | Export for TikTok, YouTube Shorts or YouTube and follow progress |
+| `list_projects` / `save_project` | See recent projects and save the open one |
+| `snapshot` | Get a PNG of any frame, rendered exactly as the export will look |
+
+**What a session looks like:**
+
+> **You:** Turn today's Kopi & Coins shots into a TikTok.
+>
+> **Claude** (higgsfield-video skill): renders the shots in Higgsfield and writes `~/Kopi/ep1/lahlah-edit.json`, then calls `lahlah-video.open_handoff` with that path. *"Laid out 6 shots, 31.5 s, 9:16, with captions and the lo-fi track."*
+>
+> **You:** The cut into the tin feels abrupt.
+>
+> **Claude:** `run_command("go to 9 seconds")`, `run_command("add crossfade")`, then `snapshot(t: 9.3)` to check the frame. *"Crossfade added between shots 2 and 3; the caption still reads clearly."*
+>
+> **You:** Ship it.
+>
+> **Claude:** `export(preset: "tiktok")` returns job `exp_…`; `export_status` until `done`. *"Saved to Movies/LahLah Video/Kopi & Coins Ep1.mp4 (1080 × 1920)."*
+
+### The local API
+
+Scripts (and LahLah Voice) can use the same API directly: HTTP on `127.0.0.1` with the key from **Settings › API** (show, copy, regenerate, on/off). See [docs/API.md](docs/API.md) for the endpoints and examples, or fetch `/openapi.json` from the running app.
 
 ## Talk to it
 
-Press **Cmd+K** (Mac) or **Ctrl+K** (Windows), or click **Tell LahLah what to do…** at the top. Type, or dictate:
+Press **Cmd+K** (Mac) or **Ctrl+K** (Windows), or click **Ask LahLah** at the bottom right of the timeline. Type, or dictate:
 
-- **Mac:** [LahLah Voice](https://github.com/alfredang/lahlahvoiceapp) types straight into the box. Turn on *LahLah Video commands* in LahLah Voice and you can skip the box: say *"Video, split here"* from anywhere.
+- **Mac:** [LahLah Voice](https://github.com/alfredang/lahlahvoiceapp) types straight into the box. With *LahLah Video commands* on in LahLah Voice you can skip the box: say *"Video, split here"* from anywhere and LahLah Voice sends it through this app's API (or its `lahlahvideo://` link).
 - **Windows:** click in the box and press **Win+H**.
 
 Commands run offline with a built-in parser: no account, no API key. Numbers can be words ("split at three seconds").
 
 ![The command bar with "split at 3 seconds" typed in](docs/screenshot-command-bar.png)
+
+![Media › From Claude / Higgsfield: open lahlah-edit.json or paste Higgsfield links](docs/screenshot-claude-panel.png)
 
 | Play and move | Cut and trim | Speed and sound |
 |---|---|---|
@@ -109,7 +173,7 @@ Commands run offline with a built-in parser: no account, no API key. Numbers can
 | `add crossfade` · `add slide transition` | `add text 'Save first' at 2 seconds` | `make it vertical` · `make it 9:16` |
 | `dip to black` · `fade in` · `fade out` | `add title "Kopi & Coins" for 3 seconds` | `make it YouTube` · `make it square` |
 | `add filter kopi warm` · `make it black and white` | `add sticker fire` | `zoom in` · `undo` · `redo` · `save project` |
-| `make it bigger` · `rotate 90 degrees` · `flip` | `auto captions` | `export for TikTok` · `export for YouTube in 4K` |
+| `make it bigger` · `rotate 90 degrees` · `flip` | `auto captions` | `export for TikTok` · `export for TikTok now` · `export for YouTube in 4K` |
 
 Type `help` in the command bar for this list inside the app.
 
@@ -132,7 +196,7 @@ Type `help` in the command bar for this list inside the app.
 
 ## The hand-off file: `lahlah-edit.json`
 
-Claude's `higgsfield-video` skill writes this after Higgsfield renders the shots. LahLah Video reads it with **File → Open edit…**, a drag onto the window, or `lahlahvideo://open?file=…`. Only `schema` and `clips[].src` are required; everything else is optional.
+Claude's `higgsfield-video` skill writes this after Higgsfield renders the shots. LahLah Video reads it with **File → Open edit…**, **Media › From Claude / Higgsfield › Open lahlah-edit.json**, a drag onto the window, `lahlahvideo://open?file=…`, or the MCP tool `open_handoff`. Only `schema` and `clips[].src` are required; everything else is optional.
 
 ```json
 {
@@ -185,7 +249,8 @@ Pushing a `v*` tag runs [`.github/workflows/release.yml`](.github/workflows/rele
 | Part | Built with |
 |---|---|
 | Desktop shell | [Tauri 2](https://v2.tauri.app) (Rust) using the system web view, so the app stays small |
-| Editor | React 19 + TypeScript + Vite |
+| Editor | React 19 + TypeScript + Vite, white theme from LahLah Voice's design tokens ([`src/styles/tokens.css`](src/styles/tokens.css)) |
+| Claude | MCP server in [`mcp/`](mcp/) (`@modelcontextprotocol/sdk`), packed as a Claude Desktop extension (`.mcpb`); local API in [`src-tauri/src/control.rs`](src-tauri/src/control.rs) |
 | Export | [FFmpeg](https://ffmpeg.org) 6 static build ([ffmpeg-static](https://github.com/eugeneware/ffmpeg-static)), bundled as a sidecar. The whole timeline becomes one `filter_complex`: `xfade` for transitions, `overlay` for layers and keyframes, `eq`/`colortemperature`/`vignette` for colour, `amix` + `sidechaincompress` for music ducking. Text and stickers are drawn once on a canvas and burned in, so the MP4 matches the preview. |
 | Voice | Offline rule-based parser ([`src/commands/parse.ts`](src/commands/parse.ts)), deep links via `tauri-plugin-deep-link` |
 
@@ -206,6 +271,7 @@ The original LahLahVideo pipeline (type a topic, Claude writes the script, Edge 
 | A Higgsfield link won't download | Use the clip's direct download link (it usually ends in `.mp4`), not the page link. Links can expire; copy a fresh one. |
 | Export failed | The error box shows FFmpeg's last lines. The usual cause is a clip that moved or was deleted after import; re-import it. |
 | Export is slow | 4K takes several times longer than 1080p. TikTok and YouTube Shorts look sharp at 1080p. |
+| Claude says LahLah Video is not running | Open LahLah Video once, and check **Settings › API › Allow API control** is on. The MCP server reads `control.json` from the app-data folder. |
 | The mic button says speech isn't available | Desktop web views rarely ship a speech service. Dictate into the box with LahLah Voice (Mac) or Win+H (Windows). |
 
 ## Credits

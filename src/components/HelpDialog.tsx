@@ -1,6 +1,7 @@
 import { setUI } from "../lib/store";
 import { isMac, modKey } from "../lib/platform";
-import { Modal } from "./ui";
+import { useEffect, useState } from "react";
+import { Mark, Modal } from "./ui";
 import { VOICE_GROUPS } from "../commands/cheatsheet";
 
 const KEYS: [string, string][] = [
@@ -22,8 +23,25 @@ const KEYS: [string, string][] = [
 ];
 
 export function HelpDialog() {
+  const [appVersion, setVersion] = useState("");
+  useEffect(() => {
+    import("@tauri-apps/api/app")
+      .then(({ getVersion }) => getVersion())
+      .then(setVersion)
+      .catch(() => setVersion(""));
+  }, []);
   return (
-    <Modal title="Say it, or press it" onClose={() => setUI({ helpOpen: false })} wide>
+    <Modal title="Help and About" onClose={() => setUI({ helpOpen: false })} wide>
+      <div className="about-card">
+        <Mark size={44} />
+        <div>
+          <b>LahLah Video {appVersion}</b>
+          <p className="hint">
+            From the makers of <a href="https://alfredang.github.io/lahlahvoiceapp/" target="_blank" rel="noreferrer">LahLah Voice</a>. Built by Tertiary Infotech Academy for the WSQ course <i>Agentic AI for Video Creation</i>.{" "}
+            <a href="https://github.com/alfredang/LahLahVideo" target="_blank" rel="noreferrer">Source and updates</a>.
+          </p>
+        </div>
+      </div>
       <div className="help-grid">
         <section>
           <h3>Talk to LahLah Video</h3>

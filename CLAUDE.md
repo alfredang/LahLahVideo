@@ -28,6 +28,11 @@ CI (`.github/workflows/ci.yml`) typechecks, tests with a real static FFmpeg, bui
 - `src/lib/handoff.ts`: the `lahlah-edit/1` hand-off schema shared with the course skills. Do not change field names.
 - `src-tauri/`: Rust shell (plugins only), capabilities, config. Bundle id `com.tertiaryinfotech.lahlahvideo`, deep-link scheme `lahlahvideo://`.
 - `install/`: one-line installers referenced by the course labs. Keep the URLs and behaviour stable.
+- `src/styles/tokens.css`: the LahLah family design tokens (from LahLah Voice's `Brand.swift`). White theme; colours live here only.
+- Layout follows CapCut desktop conventions (layout only, never its branding): asset panel with a horizontal tab row (top left), Player (centre), Details/inspector (right), timeline (bottom) with the main track and Cover tile.
+- `src-tauri/src/control.rs` + `src/control/`: local API on 127.0.0.1 (random port, key in Settings › API, `control.json` in app data). Routes are defined once in `src/control/protocol.ts` and documented in `docs/openapi.json` / `docs/API.md`; tests check they agree.
+- `mcp/`: the MCP server (stdio) and the Claude Desktop extension (`mcp/bundle/manifest.json`, packed with `npm run bundle`). `cd mcp && npm test`; `node test/e2e.mjs <handoff> <out.mp4>` drives a running app end to end.
+- `scripts/make_icon.swift`: renders the app icon in the LahLah family style (`swift scripts/make_icon.swift out.png --rounded`, then `npx tauri icon`).
 
 ## Video creation skills
 

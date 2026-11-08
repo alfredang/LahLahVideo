@@ -65,6 +65,33 @@ export function loadMeta(url: string, kind: MediaKind): Promise<{ duration: numb
   });
 }
 
+/** Browser mode: one full-size frame of a same-origin video as a PNG data URL. */
+export function grabFrame(url: string, t: number): Promise<string | undefined> {
+  return new Promise((resolve) => {
+    const v = document.createElement("video");
+    v.muted = true;
+    v.preload = "auto";
+    v.src = url;
+    const fail = setTimeout(() => resolve(undefined), 8000);
+    v.onloadeddata = () => {
+      v.currentTime = Math.max(0, Math.min(t, (v.duration || t) - 0.01));
+    };
+    v.onseeked = () => {
+      try {
+        const c = document.createElement("canvas");
+        c.width = v.videoWidth || 1080;
+        c.height = v.videoHeight || 1920;
+        c.getContext("2d")!.drawImage(v, 0, 0, c.width, c.height);
+        clearTimeout(fail);
+        resolve(c.toDataURL("image/png"));
+      } catch {
+        resolve(undefined);
+      }
+    };
+    v.onerror = () => resolve(undefined);
+  });
+}
+
 /** Browser mode thumbnail: grab a frame from a same-origin blob URL. */
 function browserThumb(url: string, kind: MediaKind): Promise<string | undefined> {
   if (kind === "image") return Promise.resolve(url);

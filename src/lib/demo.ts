@@ -187,3 +187,8 @@ export async function buildDemoProject(): Promise<Project> {
   p = updateClip(r.project, r.clip.id, { volume: 0.5, fadeOut: 1, audioRole: "music" });
   return touch(p);
 }
+
+/** Library: the built-in lo-fi loop, made on the fly (no download, no licence worries). */
+export async function libraryMusic(): Promise<MediaItem> {
+  return toMedia("lofi-kopi-loop.wav", synthMusic(), "audio", "audio/wav", 12);
+}

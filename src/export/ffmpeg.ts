@@ -27,6 +27,8 @@ export interface BuildInput {
   pathOf: (m: MediaItem) => string;
   /** Mix the audio only (used for auto-captions). */
   audioOnly?: boolean;
+  /** Render one PNG frame at this time instead of a video (API snapshot). */
+  snapshotAt?: number;
 }
 
 export interface BuildResult {
@@ -97,7 +99,7 @@ export function atempoChain(speed: number): string[] {
   return out;
 }
 
-export function buildFfmpegArgs({ project: p, opts, rasters, pathOf, audioOnly }: BuildInput): BuildResult {
+export function buildFfmpegArgs({ project: p, opts, rasters, pathOf, audioOnly, snapshotAt }: BuildInput): BuildResult {
   const T = totalDuration(p);
   if (T <= 0) throw new Error("The timeline is empty. Add a clip first.");
   const W = even(opts.width);
@@ -254,6 +256,13 @@ export function buildFfmpegArgs({ project: p, opts, rasters, pathOf, audioOnly }
       cur = out;
       li++;
     }
+  }
+  if (snapshotAt !== undefined) {
+    const at = Math.max(0, Math.min(snapshotAt, T - 1 / F));
+    graph.push(`[${cur}]trim=start=${n(at)},setpts=PTS-STARTPTS,format=rgb24[vout]`);
+    const filter = graph.join(";\n");
+    args.push("-filter_complex", filter, "-map", "[vout]", "-frames:v", "1", "-update", "1", opts.output);
+    return { args, duration: T, filter };
   }
   graph.push(`[${cur}]format=yuv420p[vout]`);
   }

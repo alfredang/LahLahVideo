@@ -17,3 +17,4 @@ topic-to-video/public/scene_*.mp3
 topic-to-video/public/scene_*.vtt
 topic-to-video/public/plan.json
 topic-to-video/.remotion/
+dist-release/

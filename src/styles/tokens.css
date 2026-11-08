@@ -1,0 +1,62 @@
+/*
+ * LahLah family design tokens.
+ * Source of truth: LahLah Voice, Apps/Shared/Brand.swift (alfredang/lahlahvoiceapp):
+ * warm paper, dark ink and one ember accent. Change a colour here, not in app.css.
+ *
+ * Contrast (WCAG 2.x, on --card #fff):
+ *   --ink 17.4:1 · --muted 5.5:1 · --ember-ink 5.0:1 (text and links in ember)
+ *   --ember 3.0:1 is for fills, rings, the playhead and large shapes only, never small text.
+ *   Text on an ember fill uses --ink (5.8:1).
+ */
+:root {
+  /* Brand.swift colours */
+  --sand: #f3f1eb; /* Brand.sand: app background */
+  --panel: #fcfbf8; /* Brand.panel: content panels */
+  --card: #ffffff; /* Brand.card: cards and inputs */
+  --ink: #1c1b19; /* Brand.ink: text, prominent buttons */
+  --muted: #6b6961; /* Brand.muted: secondary text */
+  --hairline: rgba(0, 0, 0, 0.08); /* Brand.hairline: borders */
+  --ember: #e8743b; /* Brand.ember = Brand.accent */
+  --local-badge: #e6ebfb; /* Brand.localBadge */
+  --local-text: #405ccc; /* Brand.localText */
+
+  /* Derived */
+  --ember-ink: #b4521f; /* ember darkened for AA text */
+  --ember-soft: rgba(232, 116, 59, 0.12); /* HomeView: Brand.ember.opacity(0.12) */
+  --ember-ring: rgba(232, 116, 59, 0.35);
+  --hairline-strong: rgba(0, 0, 0, 0.16);
+  --select: rgba(0, 0, 0, 0.06); /* MainWindow sidebar selection */
+  --hover: rgba(0, 0, 0, 0.04);
+  --ink-hover: #34322e;
+  --stage: #e9e6dd; /* around the video canvas */
+  --danger: #b42318;
+  --danger-soft: #fdecea;
+  --ok: #1f7a4d;
+  --shadow: 0 1px 2px rgba(28, 27, 25, 0.06), 0 8px 24px rgba(28, 27, 25, 0.08);
+  --shadow-pop: 0 24px 60px rgba(28, 27, 25, 0.22);
+
+  /* Timeline clips: distinct hues, light fills, ink labels (all labels >= 7:1) */
+  --clip-video: #dbe6f6;
+  --clip-video-edge: #8fb0dc;
+  --clip-text: #ece4fb;
+  --clip-text-edge: #a991de;
+  --clip-sticker: #fcecd6;
+  --clip-sticker-edge: #e3b06e;
+  --clip-audio: #dcf1e6;
+  --clip-audio-edge: #7cc39e;
+  --clip-wave: rgba(31, 122, 77, 0.35);
+
+  /* Shape and type (Brand.swift / MainWindow: brandCard 14, cards 12–16, sidebar items 9, badge 6) */
+  --radius-window: 16px;
+  --radius-card: 14px;
+  --radius-md: 12px;
+  --radius-item: 9px;
+  --radius-badge: 6px;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text", "Segoe UI", system-ui, Roboto, Arial, sans-serif;
+  --font-emoji: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+}

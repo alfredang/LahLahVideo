@@ -1,25 +1,23 @@
-import { useState } from "react";
-import { apply, clock, useClock, useStore } from "../lib/store";
-import { Clip, Project, TRANSITIONS, TransitionType } from "../lib/types";
+import { useEffect, useState } from "react";
+import { apply, clock, InspectorTab, setUI, useClock, useStore } from "../lib/store";
+import { toggleVoiceOver } from "../lib/recorder";
+import { ASPECTS, AspectId, Clip, Project, TRANSITIONS, TransitionType } from "../lib/types";
 import {
   clamp,
-  clipsOnTrack,
   interpolateKeyframes,
   LOOKS,
-  mainTrack,
+  setAspect,
   setSpeed,
-  setTransition,
   TEXT_PRESETS,
   TEXT_PRESET_LABELS,
   trackOf,
-  transitionLength,
   updateClip,
   upsertKeyframe,
   VisualState,
 } from "../lib/project";
-import { Btn, Seg, Slider } from "./ui";
+import { Btn, Modal, Seg, Slider } from "./ui";
 
-type Tab = "basic" | "text" | "speed" | "audio" | "animate" | "adjust" | "transition";
+type Tab = InspectorTab;
 
 const pct = (v: number) => `${Math.round(v * 100)}%`;
 const secs = (v: number) => `${v.toFixed(1)}s`;
@@ -39,14 +37,20 @@ function ClipInspector({ p, c }: { p: Project; c: Clip }) {
   const isMain = trackOf(p, c)?.type === "main";
   const tabs: { id: Tab; label: string }[] = [
     ...(c.type === "text" ? [{ id: "text" as Tab, label: "Text" }] : []),
-    ...(isVisual ? [{ id: "basic" as Tab, label: "Position" }] : []),
-    ...(c.type === "video" || c.type === "audio" ? [{ id: "speed" as Tab, label: "Speed" }] : []),
+    ...(isVisual ? [{ id: "video" as Tab, label: c.type === "video" || c.type === "image" ? "Video" : "Basic" }] : []),
     ...(hasSound ? [{ id: "audio" as Tab, label: "Audio" }] : []),
-    { id: "animate", label: isVisual ? "Animate" : "Fades" },
-    ...(isMedia ? [{ id: "adjust" as Tab, label: "Colour" }] : []),
-    ...(isMain ? [{ id: "transition" as Tab, label: "Transition" }] : []),
+    ...(c.type === "video" || c.type === "audio" ? [{ id: "speed" as Tab, label: "Speed" }] : []),
+    { id: "animation", label: "Animation" },
+    ...(isMedia ? [{ id: "adjust" as Tab, label: "Adjust" }] : []),
   ];
-  const [tab, setTab] = useState<Tab>(tabs[0].id);
+  const request = useStore((s) => s.ui.inspectorTab);
+  const section = useStore((s) => s.ui.inspectorSection);
+  const [tab, setTab] = useState<Tab>(request && tabs.some((x) => x.id === request) ? request : tabs[0].id);
+  useEffect(() => {
+    if (request && tabs.some((x) => x.id === request)) setTab(request);
+    if (request) setUI({ inspectorTab: undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [request]);
   const t = useClock((x) => x.t);
   const local = clamp(t - c.start, 0, c.duration);
   const vs = interpolateKeyframes(c, local);
@@ -65,7 +69,7 @@ function ClipInspector({ p, c }: { p: Project; c: Clip }) {
   });
 
   return (
-    <div className="inspector">
+    <div className="inspector panel">
       <div className="insp-title">
         <strong>{c.type === "text" ? "Text" : c.type === "sticker" ? `Sticker ${c.sticker}` : (c.label ?? m?.name ?? "Clip")}</strong>
         <span className="muted-label">
@@ -82,7 +86,7 @@ function ClipInspector({ p, c }: { p: Project; c: Clip }) {
       <div className="insp-body">
         {tab === "text" && c.text && <TextEditor c={c} upd={upd} />}
 
-        {tab === "basic" && (
+        {tab === "video" && (
           <>
             <Slider label="Left / right" value={vs.x} min={-1} max={1} onChange={(v) => setVis("x", v)} format={pct} reset={0} keyframe={kfToggle("x")} tip="Or drag the clip on the preview" />
             <Slider label="Up / down" value={vs.y} min={-1} max={1} onChange={(v) => setVis("y", v)} format={pct} reset={0} keyframe={kfToggle("y")} />
@@ -95,7 +99,7 @@ function ClipInspector({ p, c }: { p: Project; c: Clip }) {
               <Btn label="Reset" tip="Back to centred, full size" onClick={() => apply((q) => updateClip(q, c.id, (x) => ({ keyframes: [], transform: { ...x.transform, x: 0, y: 0, scale: 1, rotation: 0, opacity: 1, flipH: false, flipV: false, crop: { l: 0, t: 0, r: 0, b: 0 } } })))} />
             </div>
             {isMedia && (
-              <details className="crop">
+              <details className="crop" open={section === "crop" || undefined}>
                 <summary>Crop</summary>
                 {(["l", "r", "t", "b"] as const).map((side) => (
                   <Slider
@@ -111,6 +115,7 @@ function ClipInspector({ p, c }: { p: Project; c: Clip }) {
                 ))}
               </details>
             )}
+            {isMain && <BackgroundPicker p={p} />}
           </>
         )}
 
@@ -148,10 +153,12 @@ function ClipInspector({ p, c }: { p: Project; c: Clip }) {
             )}
             <Slider label="Fade in" value={c.fadeIn} min={0} max={Math.min(5, c.duration / 2)} onChange={(v) => upd({ fadeIn: v }, "fi")} format={secs} reset={0} />
             <Slider label="Fade out" value={c.fadeOut} min={0} max={Math.min(5, c.duration / 2)} onChange={(v) => upd({ fadeOut: v }, "fo")} format={secs} reset={0} />
+            <h4>Voice-over</h4>
+            <Btn icon="mic" label="Record voice-over" tip="Records from your microphone from the playhead (R)" onClick={toggleVoiceOver} className="wide" />
           </>
         )}
 
-        {tab === "animate" && (
+        {tab === "animation" && (
           <>
             <Slider label="Fade in" value={c.fadeIn} min={0} max={Math.min(5, c.duration / 2)} onChange={(v) => upd({ fadeIn: v }, "fi")} format={secs} reset={0} />
             <Slider label="Fade out" value={c.fadeOut} min={0} max={Math.min(5, c.duration / 2)} onChange={(v) => upd({ fadeOut: v }, "fo")} format={secs} reset={0} />
@@ -206,7 +213,6 @@ function ClipInspector({ p, c }: { p: Project; c: Clip }) {
           </>
         )}
 
-        {tab === "transition" && <TransitionEditor p={p} c={c} />}
       </div>
     </div>
   );
@@ -257,25 +263,6 @@ function TextEditor({ c, upd }: { c: Clip; upd: (patch: Partial<Clip> | ((x: Cli
   );
 }
 
-function TransitionEditor({ p, c }: { p: Project; c: Clip }) {
-  const main = clipsOnTrack(p, mainTrack(p).id);
-  const i = main.findIndex((x) => x.id === c.id);
-  if (i <= 0) return <p className="hint">This is the first clip. Transitions sit between two clips, so pick the second clip to add one.</p>;
-  const cur = c.transitionIn?.type ?? "cut";
-  const L = transitionLength(main[i - 1], c);
-  return (
-    <>
-      <p className="hint">
-        Between clip {i} and clip {i + 1}.
-      </p>
-      <TransitionGrid value={cur} onPick={(type) => apply((q) => setTransition(q, c.id, type, c.transitionIn?.duration ?? 0.5))} />
-      {cur !== "cut" && (
-        <Slider label="Length" value={c.transitionIn?.duration ?? 0.5} min={0.1} max={2} onChange={(v) => apply((q) => setTransition(q, c.id, cur, v), `${c.id}-tlen`)} format={() => `${L.toFixed(1)}s`} />
-      )}
-    </>
-  );
-}
-
 export const TRANSITION_INFO: Record<TransitionType, { label: string; tip: string; icon: string }> = {
   cut: { label: "Cut", tip: "Straight cut, no effect", icon: "▮▮" },
   crossfade: { label: "Crossfade", tip: "One shot melts into the next", icon: "◐" },
@@ -299,40 +286,81 @@ export function TransitionGrid({ value, onPick }: { value: TransitionType; onPic
 }
 
 function ProjectSettings({ p }: { p: Project }) {
+  const path = useStore((s) => s.ui.projectPath);
+  const open = useStore((s) => s.ui.detailsOpen);
+  const { w, h } = ASPECTS[p.aspect];
+  const rows: [string, string][] = [
+    ["Name", p.name],
+    ["Saved location", path ?? "Not saved yet (auto-saved in the app)"],
+    ["Import material", `${p.media.length} file${p.media.length === 1 ? "" : "s"}`],
+    ["Ratio", `${p.aspect} (${ASPECTS[p.aspect].hint})`],
+    ["Resolution", `${w} × ${h}, export up to 4K`],
+    ["Frame rate", `${p.fps} fps`],
+    ["Background", p.background.type === "blur" ? "Blurred clip" : `Colour ${p.background.color}`],
+    ["Music ducking", p.ducking ? "On under voice-over" : "Off"],
+  ];
+  if (p.higgsfield?.name) rows.push(["Higgsfield project", p.higgsfield.name]);
   return (
-    <div className="inspector">
-      <div className="insp-title">
-        <strong>Project</strong>
-        <span className="muted-label">Click a clip to edit it</span>
+    <div className="inspector panel">
+      <div className="panel-head">
+        <span>Details</span>
       </div>
-      <div className="insp-body">
-        <span className="field-label">Video name</span>
-        <input className="text-field" value={p.name} onChange={(e) => apply((q) => ({ ...q, name: e.target.value }), "name")} />
-        <span className="field-label">Frame rate</span>
-        <Seg value={String(p.fps)} options={["24", "30", "60"].map((f) => ({ id: f, label: `${f} fps` }))} onChange={(v) => apply((q) => ({ ...q, fps: Number(v) }))} />
-        <label className="check" title="Lower the music automatically while a voice-over plays">
-          <input type="checkbox" checked={p.ducking} onChange={(e) => apply((q) => ({ ...q, ducking: e.target.checked }))} /> Duck music under voice-over
-        </label>
-        {p.higgsfield?.url && (
-          <p className="hint">
-            Higgsfield project: <a href={p.higgsfield.url} target="_blank" rel="noreferrer">{p.higgsfield.name ?? p.higgsfield.url}</a>
-          </p>
-        )}
-        <div className="tips">
-          <h4>Three moves cover most edits</h4>
-          <ol>
-            <li>
-              Park the playhead and press <kbd>S</kbd> to split.
-            </li>
-            <li>
-              Drag a clip edge to trim. Drag the middle to reorder.
-            </li>
-            <li>
-              Click the small square between clips to add a transition.
-            </li>
-          </ol>
+      <div className="insp-body details">
+        <dl>
+          {rows.map(([k, v]) => (
+            <div key={k}>
+              <dt>{k}</dt>
+              <dd title={v}>{v}</dd>
+            </div>
+          ))}
+        </dl>
+        <p className="hint">Select a clip on the timeline to edit it here.</p>
+        <div className="details-foot">
+          <Btn label="Modify" onClick={() => setUI({ detailsOpen: true })} tip="Change the name, ratio, frame rate and background" />
         </div>
       </div>
+      {open && <DetailsModal p={p} />}
     </div>
+  );
+}
+
+function DetailsModal({ p }: { p: Project }) {
+  return (
+    <Modal title="Project details" onClose={() => setUI({ detailsOpen: false })}>
+      <span className="field-label">Video name</span>
+      <input className="text-field" value={p.name} onChange={(e) => apply((q) => ({ ...q, name: e.target.value }), "name")} />
+      <span className="field-label">Ratio</span>
+      <Seg value={p.aspect} options={(Object.keys(ASPECTS) as AspectId[]).map((id) => ({ id, label: id, tip: ASPECTS[id].hint }))} onChange={(a) => apply((q) => setAspect(q, a))} />
+      <span className="field-label">Frame rate</span>
+      <Seg value={String(p.fps)} options={["24", "30", "60"].map((f) => ({ id: f, label: `${f} fps` }))} onChange={(v) => apply((q) => ({ ...q, fps: Number(v) }))} />
+      <BackgroundPicker p={p} />
+      <label className="check" title="Lower the music automatically while a voice-over plays">
+        <input type="checkbox" checked={p.ducking} onChange={(e) => apply((q) => ({ ...q, ducking: e.target.checked }))} /> Duck music under voice-over
+      </label>
+      <div className="row">
+        <Btn kind="primary" label="Done" onClick={() => setUI({ detailsOpen: false })} />
+      </div>
+    </Modal>
+  );
+}
+
+function BackgroundPicker({ p }: { p: Project }) {
+  return (
+    <>
+      <span className="field-label">Canvas background (all clips)</span>
+      <div className="row">
+        <Seg<"blur" | "color">
+          value={p.background.type}
+          options={[
+            { id: "blur", label: "Blur", tip: "A blurred copy of the clip fills the edges" },
+            { id: "color", label: "Colour", tip: "A solid colour fills the edges" },
+          ]}
+          onChange={(type) => apply((q) => ({ ...q, background: { ...q.background, type } }))}
+        />
+        {p.background.type === "color" && (
+          <input type="color" value={p.background.color} title="Background colour" onChange={(e) => apply((q) => ({ ...q, background: { ...q.background, color: e.target.value } }), "bg-color")} />
+        )}
+      </div>
+    </>
   );
 }

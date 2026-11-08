@@ -7,6 +7,9 @@ import { Timeline } from "./components/Timeline";
 import { CommandBar } from "./components/CommandBar";
 import { ExportDialog } from "./components/ExportDialog";
 import { HelpDialog } from "./components/HelpDialog";
+import { SettingsDialog } from "./components/SettingsDialog";
+import { CoachMarks } from "./components/CoachMarks";
+import { startControlListener } from "./control/handler";
 import { clock, redo, replaceProject, seek, setUI, store, togglePlay, undo, useStore } from "./lib/store";
 import { useToasts } from "./lib/toast";
 import { clamp, totalDuration } from "./lib/project";
@@ -60,11 +63,12 @@ function useKeyboard() {
         return;
       }
       if (e.key === "Escape") {
-        if (ui.commandOpen || ui.helpOpen) setUI({ commandOpen: false, helpOpen: false });
+        if (ui.fullscreen) setUI({ fullscreen: false });
+        else if (ui.commandOpen || ui.helpOpen || ui.settingsOpen) setUI({ commandOpen: false, helpOpen: false, settingsOpen: false });
         else setUI({ selectedId: null });
         return;
       }
-      if (ui.commandOpen || ui.exportOpen || ui.helpOpen) return;
+      if (ui.commandOpen || ui.exportOpen || ui.helpOpen || ui.settingsOpen) return;
       if (isTyping(e)) return;
       const fps = store.get().project.fps;
       if (mod && k === "z") {
@@ -173,6 +177,7 @@ function useStartup() {
     const done = (async () => {
       if (isDesktop) {
         void installNativeMenu();
+        void startControlListener();
         try {
           const dl = await import("@tauri-apps/plugin-deep-link");
           await dl.onOpenUrl((urls) => urls.forEach(handleDeepLink));
@@ -218,6 +223,7 @@ function useStartup() {
       if (s.project === last) return;
       last = s.project;
       autosaveLocal(s.project);
+      setTimeout(() => setUI({ lastAutoSave: Date.now() }), 1300);
       setWindowTitle(`${s.project.name}${s.ui.dirty ? " •" : ""} - LahLah Video`);
       if (isDesktop && s.ui.projectPath && s.ui.dirty) {
         clearTimeout(fileTimer);
@@ -246,7 +252,7 @@ export default function App() {
   return (
     <div className="app">
       <Header />
-      <div className="workspace">
+      <div className={`workspace ${ui.compact ? "compact" : ""}`}>
         <LeftPanel />
         <Preview />
         <Inspector />
@@ -260,6 +266,8 @@ export default function App() {
       {ui.commandOpen && <CommandBar />}
       {ui.exportOpen && <ExportDialog />}
       {ui.helpOpen && <HelpDialog />}
+      {ui.settingsOpen && <SettingsDialog />}
+      <CoachMarks />
       <div className="toasts" aria-live="polite">
         {toasts.map((t) => (
           <div key={t.id} className={`toast ${t.tone}`}>

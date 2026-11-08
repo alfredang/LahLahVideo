@@ -103,6 +103,30 @@ const PATHS: Record<string, ReactNode> = {
   diamond: <path d="M12 3l9 9-9 9-9-9z" />,
   new: <path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M12 12v6M9 15h6" />,
   wand: <path d="M15 4V2M15 16v-2M8 9h2M20 9h2M17.8 11.8 19 13M17.8 6.2 19 5M3 21l9-9M12.2 6.2 11 5" />,
+  search: <path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4" />,
+  gear: (
+    <>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
+    </>
+  ),
+  pointer: <path d="m4 4 7 17 2.5-7.5L21 11z" />,
+  crop: <path d="M6 2v14a2 2 0 0 0 2 2h14M18 22V8a2 2 0 0 0-2-2H2" />,
+  mirror: <path d="M12 3v18M8 7 3 12l5 5zM16 7l5 5-5 5z" />,
+  rotate: <path d="M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5" />,
+  freeze: <path d="M12 2v20M4.9 6.5l14.2 11M19.1 6.5 4.9 17.5M9 4l3 2 3-2M9 20l3-2 3 2" />,
+  fullscreen: <path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3" />,
+  effects: <path d="M5 3v4M3 5h4M6 17v4M4 19h4M13 3l2.3 6.9L22 12l-6.7 2.1L13 21l-2.3-6.9L4 12l6.7-2.1z" />,
+  chevron: <path d="m6 9 6 6 6-6" />,
+  chevronright: <path d="m9 6 6 6-6 6" />,
+  sliders: <path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0M14 4v4M8 10v4M16 16v4" />,
+  grid: <path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z" />,
+  list: <path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01" />,
+  layout: <path d="M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM3 13h18M9 3v10" />,
+  keyboard: <path d="M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM7 9h.01M11 9h.01M15 9h.01M7 13h.01M17 13h.01M9 16h6" />,
+  menu: <path d="M4 7h16M4 12h16M4 17h16" />,
+  reverse: <path d="M9 14 4 9l5-5M4 9h11a5 5 0 0 1 0 10h-3" />,
+  axis: <path d="M12 3v18M8 7l4-4 4 4" />,
 };
 
 export function Icon({ name, size = 20 }: { name: keyof typeof PATHS | string; size?: number }) {
@@ -118,7 +142,7 @@ export function Btn(props: {
   label?: string;
   tip?: string;
   onClick?: () => void;
-  kind?: "primary" | "ghost" | "plain" | "danger";
+  kind?: "primary" | "ghost" | "plain" | "danger" | "cta";
   disabled?: boolean;
   active?: boolean;
   big?: boolean;
@@ -200,5 +224,28 @@ export function Modal(p: { title: string; onClose: () => void; children: ReactNo
         <div className="modal-body">{p.children}</div>
       </div>
     </div>
+  );
+}
+
+/** The LahLah family mark (white disc, ember ring, ink glyph), as in LahLah Voice, with a play cue. */
+export function Mark({ size = 28 }: { size?: number }) {
+  return (
+    <span className="mark" style={{ width: size, height: size, boxShadow: `inset 0 0 0 ${Math.max(1.5, size * 0.07)}px var(--ember)` }} aria-hidden>
+      <svg width={size * 0.46} height={size * 0.46} viewBox="0 0 24 24">
+        <path d="M8 5.5v13l10.5-6.5z" fill="currentColor" stroke="currentColor" strokeWidth={1.5} strokeLinejoin="round" />
+      </svg>
+    </span>
+  );
+}
+
+export function Wordmark() {
+  return (
+    <span className="brand" title="LahLah Video, from the makers of LahLah Voice">
+      <Mark size={26} />
+      <span className="brand-name">LahLah Video</span>
+      <span className="badge-local" title="Edits and exports run on this computer">
+        Local
+      </span>
+    </span>
   );
 }

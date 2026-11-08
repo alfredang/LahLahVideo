@@ -6,7 +6,6 @@ import {
   clipEnd,
   clipsOnTrack,
   fadeFactor,
-  fmtTime,
   interpolateKeyframes,
   mainTrack,
   setAspect,
@@ -17,7 +16,7 @@ import {
 } from "../lib/project";
 import { previewImage } from "../lib/raster";
 import { useRecorder } from "../lib/recorder";
-import { Btn, Icon, Seg } from "./ui";
+import { Btn, Icon } from "./ui";
 import { EmptyStage } from "./EmptyStage";
 
 interface Fx {
@@ -249,8 +248,10 @@ export function Preview() {
     );
   };
 
+  const full = useStore((s) => s.ui.fullscreen);
   return (
-    <div className="preview">
+    <div className={`preview panel ${full ? "fullscreen" : ""}`}>
+      <PlayerHeader />
       <div className="stage-wrap" ref={wrapRef} onPointerMove={onMove} onPointerUp={() => (drag.current = null)} onPointerDown={() => setUI({ selectedId: null })}>
         {p.clips.length === 0 ? (
           <EmptyStage />
@@ -307,37 +308,75 @@ export function Preview() {
 
 function PreviewBar({ t, total, playing }: { t: number; total: number; playing: boolean }) {
   const p = useStore((s) => s.project);
+  const full = useStore((s) => s.ui.fullscreen);
   return (
     <div className="preview-bar">
       <div className="pb-left">
-        <Seg<AspectId>
-          value={p.aspect}
-          options={(Object.keys(ASPECTS) as AspectId[]).map((id) => ({ id, label: id, tip: `${ASPECTS[id].label}: ${ASPECTS[id].hint}` }))}
-          onChange={(a) => apply((q) => setAspect(q, a))}
-        />
+        <span className="timecode">
+          <b>{timecode(t, p.fps)}</b> / {timecode(total, p.fps)}
+        </span>
       </div>
       <div className="pb-mid">
         <Btn icon="start" tip="Go to start (Home)" onClick={() => seek(0)} kind="ghost" />
         <button type="button" className="play-btn" onClick={togglePlay} title="Play / pause (Space)" aria-label="Play or pause">
-          <Icon name={playing ? "pause" : "play"} size={26} />
+          <Icon name={playing ? "pause" : "play"} size={22} />
         </button>
         <Btn icon="end" tip="Go to end (End)" onClick={() => seek(total)} kind="ghost" />
-        <span className="timecode">
-          <b>{fmtTime(t, true, p.fps)}</b> / {fmtTime(total, true, p.fps)}
-        </span>
       </div>
-      <div className="pb-right" title="What fills the empty space around a clip that doesn't match the canvas">
-        <span className="muted-label">Background</span>
-        <Seg<"blur" | "color">
-          value={p.background.type}
-          options={[
-            { id: "blur", label: "Blur", tip: "Blurred copy of the clip" },
-            { id: "color", label: "Colour", tip: "Solid colour" },
-          ]}
-          onChange={(type) => apply((q) => ({ ...q, background: { ...q.background, type } }))}
-        />
-        {p.background.type === "color" && (
-          <input type="color" value={p.background.color} title="Background colour" onChange={(e) => apply((q) => ({ ...q, background: { ...q.background, color: e.target.value } }), "bg-color")} />
+      <div className="pb-right">
+        <label className="ratio-select" title="Canvas ratio: 9:16 for TikTok, Shorts and Reels; 16:9 for YouTube">
+          <span>Ratio</span>
+          <select value={p.aspect} onChange={(e) => apply((q) => setAspect(q, e.target.value as AspectId))}>
+            {(Object.keys(ASPECTS) as AspectId[]).map((id) => (
+              <option key={id} value={id} title={ASPECTS[id].hint}>
+                {id}
+              </option>
+            ))}
+          </select>
+        </label>
+        <Btn icon="fullscreen" tip={full ? "Exit full screen (Esc)" : "Full screen preview"} onClick={() => setUI({ fullscreen: !full })} kind="ghost" />
+      </div>
+    </div>
+  );
+}
+
+function timecode(s: number, fps: number) {
+  const f = Math.floor((s - Math.floor(s)) * fps);
+  const t = Math.floor(s);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(Math.floor(t / 3600))}:${pad(Math.floor((t % 3600) / 60))}:${pad(t % 60)}:${pad(f)}`;
+}
+
+function PlayerHeader() {
+  const [open, setOpen] = useState(false);
+  const p = useStore((s) => s.project);
+  const full = useStore((s) => s.ui.fullscreen);
+  return (
+    <div className="panel-head">
+      <span>Player</span>
+      <div className="file-menu">
+        <button type="button" className="mini" title="Player options" onClick={() => setOpen(!open)}>
+          <Icon name="menu" size={16} />
+        </button>
+        {open && (
+          <ul role="menu" className="right" onMouseLeave={() => setOpen(false)}>
+            <li>
+              <button type="button" onClick={() => (setOpen(false), setUI({ fullscreen: !full }))}>
+                {full ? "Exit full screen" : "Full screen"}
+              </button>
+            </li>
+            <li className="sep" />
+            <li>
+              <button type="button" onClick={() => (setOpen(false), apply((q) => ({ ...q, background: { ...q.background, type: "blur" } })))}>
+                Background: blur {p.background.type === "blur" ? "✓" : ""}
+              </button>
+            </li>
+            <li>
+              <button type="button" onClick={() => (setOpen(false), apply((q) => ({ ...q, background: { ...q.background, type: "color" } })))}>
+                Background: solid colour {p.background.type === "color" ? "✓" : ""}
+              </button>
+            </li>
+          </ul>
         )}
       </div>
     </div>

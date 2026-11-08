@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { apply, clock, project, seek, setUI, useClock, useStore } from "../lib/store";
+import { apply, clock, project, redo, seek, setUI, undo, useClock, useStore } from "../lib/store";
 import { Clip, Project, Track } from "../lib/types";
-import { addTrack, clamp, clipEnd, clipsOnTrack, fmtTime, mainTrack, moveClip, totalDuration, trackAccepts, transitionLength, trimClip } from "../lib/project";
-import { addToTimeline, deleteSelected, duplicateSelected, splitHere } from "../actions";
+import { addTrack, clamp, clipEnd, clipsOnTrack, fmtTime, mainTrack, moveClip, totalDuration, trackAccepts, transitionLength, trimClip, updateClip } from "../lib/project";
+import { addToTimeline, deleteSelected, duplicateSelected, freezeFrame, reverseClip, selectRelative, splitHere } from "../actions";
 import { Btn, Icon } from "./ui";
 import { modKey } from "../lib/platform";
 
-const HEAD_W = 150;
+const HEAD_W = 172;
 const TRACK_H: Record<Track["type"], number> = { main: 64, overlay: 44, text: 34, caption: 34, audio: 40 };
 const TYPE_ICON: Record<Track["type"], string> = { main: "media", overlay: "sticker", text: "text", caption: "captions", audio: "music" };
 
@@ -150,26 +150,51 @@ export function Timeline() {
   for (let s = 0; s * zoom < width; s += step) ticks.push(s);
 
   const sel = p.clips.find((c) => c.id === ui.selectedId);
+  const videoSel = sel && sel.type === "video" ? sel : null;
+  const [selMenu, setSelMenu] = useState(false);
+  const canUndo = useStore((s) => s.past.length > 0);
+  const canRedo = useStore((s) => s.future.length > 0);
+  const [axisX, setAxisX] = useState<number | null>(null);
+  const [menu, setMenu] = useState<{ x: number; y: number; id: string } | null>(null);
+  const visualSel = sel && sel.type !== "audio" ? sel : null;
+  const mediaSel = sel && (sel.type === "video" || sel.type === "image") ? sel : null;
 
   return (
-    <div className="timeline">
-      <div className="tl-toolbar">
-        <Btn icon="split" label="Split" tip="Split at the playhead (S)" onClick={() => splitHere()} />
-        <Btn icon="trash" label="Delete" tip="Delete the selected clip (Delete)" onClick={() => deleteSelected(false)} disabled={!sel} />
-        <Btn icon="ripple" label="Ripple delete" tip="Delete and close the gap (Shift+Delete)" onClick={() => deleteSelected(true)} disabled={!sel} />
-        <Btn icon="copy" label="Duplicate" tip={`Duplicate (${modKey}+D)`} onClick={duplicateSelected} disabled={!sel} />
+    <div className="timeline panel">
+      <div className="tl-toolbar" data-coach="timeline">
+        <div className="file-menu">
+          <Btn icon="pointer" label="▾" tip="Select" kind="ghost" active onClick={() => setSelMenu(!selMenu)} />
+          {selMenu && (
+            <ul role="menu" onMouseLeave={() => setSelMenu(false)}>
+              <li><button type="button" onClick={() => (setSelMenu(false), setUI({ selectedId: null }))}>Select nothing <small>Esc</small></button></li>
+              <li><button type="button" onClick={() => (setSelMenu(false), selectRelative("prev"))}>Previous clip</button></li>
+              <li><button type="button" onClick={() => (setSelMenu(false), selectRelative("next"))}>Next clip</button></li>
+            </ul>
+          )}
+        </div>
+        <Btn icon="undo" tip={`Undo (${modKey}+Z)`} kind="ghost" onClick={undo} disabled={!canUndo} />
+        <Btn icon="redo" tip={`Redo (${modKey}+Shift+Z)`} kind="ghost" onClick={redo} disabled={!canRedo} />
         <span className="tl-sep" />
-        <Btn icon="magnet" label="Snap" tip="Snap clips to the playhead and other clips" active={ui.snapping} onClick={() => setUI({ snapping: !ui.snapping })} />
+        <Btn icon="split" tip="Split at the playhead (S)" kind="ghost" onClick={() => splitHere()} />
+        <Btn icon="trash" tip="Delete (Delete). Shift+Delete also closes the gap" kind="ghost" onClick={() => deleteSelected(false)} disabled={!sel} />
+        <Btn icon="freeze" tip="Freeze: hold the frame under the playhead for 2 seconds" kind="ghost" onClick={() => void freezeFrame()} />
+        <Btn icon="reverse" tip="Reverse: play the selected video clip backwards" kind="ghost" disabled={!videoSel} onClick={() => void reverseClip()} />
+        <Btn icon="mirror" tip="Mirror (flip left to right)" kind="ghost" disabled={!visualSel} onClick={() => visualSel && apply((q) => updateClip(q, visualSel.id, (c) => ({ transform: { ...c.transform, flipH: !c.transform.flipH } })))} />
+        <Btn icon="rotate" tip="Rotate 90°" kind="ghost" disabled={!visualSel} onClick={() => visualSel && apply((q) => updateClip(q, visualSel.id, (c) => ({ transform: { ...c.transform, rotation: (c.transform.rotation + 90) % 360 } })))} />
+        <Btn icon="crop" tip="Crop (opens Video › Crop in Details)" kind="ghost" disabled={!mediaSel} onClick={() => setUI({ inspectorTab: "video", inspectorSection: "crop" })} />
         <span className="tl-grow" />
-        <Btn icon="plus" label="Overlay track" tip="Add another overlay track for picture-in-picture" onClick={() => apply((q) => addTrack(q, "overlay"))} />
-        <Btn icon="plus" label="Audio track" tip="Add another audio track" onClick={() => apply((q) => addTrack(q, "audio"))} />
+        <Btn icon="plus" tip="Add an overlay track (picture-in-picture)" kind="ghost" onClick={() => apply((q) => addTrack(q, "overlay"))} />
+        <Btn icon="music" tip="Add an audio track" kind="ghost" onClick={() => apply((q) => addTrack(q, "audio"))} />
         <span className="tl-sep" />
+        <Btn icon="media" tip="Main track magnet: clips on the main track always sit end to end" kind="ghost" active disabled />
+        <Btn icon="magnet" tip={ui.snapping ? "Snapping on" : "Snapping off"} kind="ghost" active={ui.snapping} onClick={() => setUI({ snapping: !ui.snapping })} />
+        <Btn icon="axis" tip={ui.previewAxis ? "Preview axis on: hover the timeline to preview" : "Preview axis: hover the timeline to preview"} kind="ghost" active={ui.previewAxis} onClick={() => setUI({ previewAxis: !ui.previewAxis })} />
         <Btn icon="zoomout" tip="Zoom out (-)" onClick={() => setUI({ zoom: clamp(zoom / 1.5, 8, 400) })} kind="ghost" />
         <input className="tl-zoom" type="range" min={8} max={400} value={zoom} onChange={(e) => setUI({ zoom: Number(e.target.value) })} title="Timeline zoom" />
         <Btn icon="zoomin" tip="Zoom in (+)" onClick={() => setUI({ zoom: clamp(zoom * 1.5, 8, 400) })} kind="ghost" />
         <button
           type="button"
-          className="btn plain"
+          className="btn ghost"
           title="Fit the whole video in view"
           onClick={() => {
             const w = (scroller.current?.clientWidth ?? 1000) - HEAD_W - 40;
@@ -179,7 +204,32 @@ export function Timeline() {
           Fit
         </button>
       </div>
-      <div className="tl-scroll" ref={scroller} onWheel={onWheel}>
+      {p.clips.length === 0 ? (
+        <div className="tl-empty" data-track={mainTrack(p).id}>
+          <Icon name="media" size={26} />
+          <b>Drag media here to start your edit</b>
+          <span>Or click + on a media card, or open Claude's lahlah-edit.json</span>
+        </div>
+      ) : (
+      <div
+        className="tl-scroll"
+        ref={scroller}
+        onWheel={onWheel}
+        onPointerMove={(e) => {
+          if (!ui.previewAxis || drag || clock.get().playing) return;
+          const t = timeAt(e.clientX);
+          setAxisX(HEAD_W + t * zoom);
+          seek(t);
+        }}
+        onPointerLeave={() => setAxisX(null)}
+        onContextMenu={(e) => {
+          const el = (e.target as HTMLElement).closest("[data-clip]") as HTMLElement | null;
+          if (!el) return;
+          e.preventDefault();
+          setUI({ selectedId: el.dataset.clip! });
+          setMenu({ x: e.clientX, y: e.clientY, id: el.dataset.clip! });
+        }}
+      >
         <div className="tl-inner" style={{ width: width + HEAD_W }}>
           <div className="tl-ruler" onPointerDown={scrub} style={{ paddingLeft: HEAD_W }}>
             <div className="tl-ruler-head" style={{ width: HEAD_W }} />
@@ -195,8 +245,33 @@ export function Timeline() {
           <div className="tl-playhead" style={{ left: HEAD_W + t * zoom }} onPointerDown={scrub}>
             <div className="tl-playhead-cap" />
           </div>
+          {axisX !== null && ui.previewAxis && <div className="tl-axis" style={{ left: axisX }} />}
         </div>
       </div>
+      )}
+      {menu && (
+        <ul className="ctx-menu" style={{ left: menu.x, top: menu.y }} onMouseLeave={() => setMenu(null)} role="menu">
+          {[
+            ["Split at playhead", () => splitHere()],
+            ["Duplicate", duplicateSelected],
+            ["Freeze frame", () => void freezeFrame()],
+            ["Reverse", () => void reverseClip()],
+            ["Delete", () => deleteSelected(false)],
+            ["Ripple delete (close gap)", () => deleteSelected(true)],
+          ].map(([label, fn]) => (
+            <li key={label as string}>
+              <button type="button" onClick={() => (setMenu(null), (fn as () => void)())}>
+                {label as string}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <button type="button" className="ask-pill" onClick={() => setUI({ commandOpen: true })} title={`Type or say a command (${modKey}+K)`}>
+        <Icon name="spark" size={16} />
+        Ask LahLah
+        <Icon name="mic" size={15} />
+      </button>
     </div>
   );
 }
@@ -228,7 +303,7 @@ function TrackRow({
   return (
     <div className={`tl-track ${track.type} ${track.hidden ? "hidden" : ""}`} style={{ height: h }}>
       <div className="tl-head" style={{ width: HEAD_W }}>
-        <Icon name={TYPE_ICON[track.type]} size={15} />
+        {main ? <CoverTile p={p} /> : <Icon name={TYPE_ICON[track.type]} size={15} />}
         <span className="tl-name" title={track.name}>
           {track.name}
         </span>
@@ -270,6 +345,7 @@ function TrackRow({
           return (
             <div
               key={c.id}
+              data-clip={c.id}
               className={`tl-clip ${c.type} ${selectedId === c.id ? "sel" : ""} ${isDrag ? "dragging" : ""} ${c.muted ? "muted" : ""}`}
               style={{
                 left,
@@ -307,6 +383,26 @@ function TrackRow({
         })}
       </div>
     </div>
+  );
+}
+
+/** CapCut-style "Cover" tile at the start of the main track: the first frame people see. */
+function CoverTile({ p }: { p: Project }) {
+  const first = clipsOnTrack(p, mainTrack(p).id)[0];
+  const thumb = first ? p.media.find((m) => m.id === first.mediaId)?.thumb : undefined;
+  return (
+    <button
+      type="button"
+      className="cover-tile"
+      title="Cover: the first frame people see. Drag a different clip to the front to change it."
+      style={thumb ? { backgroundImage: `url("${thumb}")` } : undefined}
+      onClick={() => {
+        seek(0);
+        if (first) setUI({ selectedId: first.id });
+      }}
+    >
+      <span>Cover</span>
+    </button>
   );
 }
 

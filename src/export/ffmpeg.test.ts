@@ -133,5 +133,10 @@ describe("ffmpeg builder", () => {
     expect(probe.height).toBe(960);
     expect(probe.hasAudio).toBe(true);
     expect(Math.abs((probe.duration ?? 0) - duration)).toBeLessThan(0.2);
+
+    const png = join(dir, "snap.png");
+    const snap = buildFfmpegArgs({ project: p, opts: { width: 270, height: 480, fps: 30, output: png }, rasters, pathOf: (m) => m.path!, snapshotAt: 2.5 });
+    execFileSync(bin!, snap.args, { stdio: "pipe" });
+    expect(existsSync(png)).toBe(true);
   }, 180_000);
 });

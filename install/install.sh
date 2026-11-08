@@ -4,16 +4,20 @@
 # Options (pass after `bash -s --` when piping):
 #   --dry-run          find the right download and print the plan, change nothing
 #   --version vX.Y.Z   install a specific release instead of the latest
+#   --with-claude      also connect Claude: opens the LahLah Video extension in Claude Desktop
+#                      and registers the MCP server with Claude Code (if installed)
 set -euo pipefail
 
 REPO="alfredang/LahLahVideo"
 APP="LahLah Video"
 DRY_RUN=0
+WITH_CLAUDE=0
 VERSION="latest"
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --dry-run) DRY_RUN=1 ;;
+    --with-claude) WITH_CLAUDE=1 ;;
     --version) VERSION="${2:-latest}"; shift ;;
     -h|--help) sed -n '2,8p' "$0" 2>/dev/null || true; exit 0 ;;
   esac
@@ -47,8 +51,13 @@ say "Found $TAG: $URL"
 DEST="/Applications"
 if [ ! -w "$DEST" ]; then DEST="$HOME/Applications"; fi
 
+MCPB_URL="https://github.com/$REPO/releases/download/$TAG/lahlah-video.mcpb"
+MCP_TGZ="https://github.com/$REPO/releases/download/$TAG/lahlah-video-mcp.tgz"
+
 if [ "$DRY_RUN" = "1" ]; then
+  if [ -d "$DEST/$APP.app" ]; then say "Dry run. $APP is already in $DEST; it would be quit and replaced."; fi
   say "Dry run. Would download the file above, copy \"$APP.app\" into $DEST, clear the quarantine flag and open it."
+  if [ "$WITH_CLAUDE" = "1" ]; then say "Dry run. Would also open $MCPB_URL in Claude Desktop and run: claude mcp add --scope user lahlah-video -- npx -y $MCP_TGZ"; fi
   exit 0
 fi
 
@@ -69,7 +78,13 @@ MNT="$(hdiutil attach -nobrowse -readonly -noautoopen "$TMP/LahLahVideo.dmg" | a
 SRC_APP="$(find "$MNT" -maxdepth 1 -name '*.app' -print | head -n 1)"
 [ -n "$SRC_APP" ] || die "No app found inside the disk image."
 
-osascript -e "quit app \"$APP\"" >/dev/null 2>&1 || true
+# Upgrading: quit the running copy and wait for it to close before replacing it.
+if pgrep -f "$APP.app/Contents/MacOS/" >/dev/null 2>&1; then
+  say "Closing the running $APP"
+  osascript -e "quit app \"$APP\"" >/dev/null 2>&1 || true
+  for _ in 1 2 3 4 5 6 7 8 9 10; do pgrep -f "$APP.app/Contents/MacOS/" >/dev/null 2>&1 || break; sleep 0.5; done
+  pkill -f "$APP.app/Contents/MacOS/" >/dev/null 2>&1 || true
+fi
 mkdir -p "$DEST"
 say "Copying $APP to $DEST"
 rm -rf "$DEST/$APP.app"
@@ -83,3 +98,26 @@ say "Starting $APP"
 open "$DEST/$APP.app"
 printf '\n\033[1;32m✓ LahLah Video %s is installed in %s and should now be open.\033[0m\n' "$TAG" "$DEST"
 printf '  Tip: press Cmd+K inside the app and type "help" to see what you can say.\n'
+
+if [ "$WITH_CLAUDE" = "1" ]; then
+  say "Connecting Claude"
+  if [ -d "/Applications/Claude.app" ] || [ -d "$HOME/Applications/Claude.app" ]; then
+    mkdir -p "$HOME/Downloads"
+    if curl -fsSL -o "$HOME/Downloads/lahlah-video.mcpb" "$MCPB_URL"; then
+      open -a Claude "$HOME/Downloads/lahlah-video.mcpb" || open "$HOME/Downloads/lahlah-video.mcpb" || true
+      say "Claude Desktop is showing the LahLah Video extension: click Install."
+    else
+      say "Could not download the Claude extension. Get it from https://github.com/$REPO/releases/latest"
+    fi
+  else
+    say "Claude Desktop not found; skipping the extension."
+  fi
+  if command -v claude >/dev/null 2>&1; then
+    if command -v npx >/dev/null 2>&1; then
+      claude mcp remove --scope user lahlah-video >/dev/null 2>&1 || true
+      claude mcp add --scope user lahlah-video -- npx -y "$MCP_TGZ" && say "Claude Code can now use LahLah Video (tool prefix: lahlah-video)."
+    else
+      say "Claude Code found but Node.js is missing; install Node.js 18+ to use the MCP server there."
+    fi
+  fi
+fi

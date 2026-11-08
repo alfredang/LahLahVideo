@@ -4,13 +4,25 @@ import { useSyncExternalStore } from "react";
 import { Project } from "./types";
 import { newProject, totalDuration } from "./project";
 
-export type LeftTab = "media" | "higgsfield" | "audio" | "text" | "stickers" | "transitions" | "filters" | "captions";
+export type LeftTab = "media" | "audio" | "text" | "captions" | "stickers" | "effects" | "transitions" | "filters" | "adjustment" | "templates";
+export type MediaSource = "local" | "claude" | "library";
+export type InspectorTab = "text" | "video" | "audio" | "speed" | "animation" | "adjust";
 
 export interface UIState {
   selectedId: string | null;
   zoom: number; // timeline pixels per second
   snapping: boolean;
   leftTab: LeftTab;
+  mediaSource: MediaSource;
+  /** Ask the inspector to switch tab (and section), e.g. the Crop button. */
+  inspectorTab?: InspectorTab;
+  inspectorSection?: "crop";
+  settingsOpen: boolean;
+  fullscreen: boolean;
+  detailsOpen: boolean;
+  compact: boolean;
+  previewAxis: boolean;
+  lastAutoSave?: number;
   exportOpen: boolean;
   commandOpen: boolean;
   helpOpen: boolean;
@@ -54,7 +66,7 @@ export const store = makeStore<State>({
   project: newProject(),
   past: [],
   future: [],
-  ui: { selectedId: null, zoom: 60, snapping: true, leftTab: "media", exportOpen: false, commandOpen: false, helpOpen: false, dirty: false },
+  ui: { selectedId: null, zoom: 60, snapping: true, leftTab: "media", mediaSource: "local", settingsOpen: false, fullscreen: false, detailsOpen: false, compact: false, previewAxis: false, exportOpen: false, commandOpen: false, helpOpen: false, dirty: false },
 });
 
 export const clock = makeStore<{ t: number; playing: boolean }>({ t: 0, playing: false });
@@ -162,4 +174,9 @@ export function pause() {
 export function togglePlay() {
   if (clock.get().playing) pause();
   else play();
+}
+
+/** Media › From Claude / Higgsfield. */
+export function openClaudePanel() {
+  setUI({ leftTab: "media", mediaSource: "claude" });
 }

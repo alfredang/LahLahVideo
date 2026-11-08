@@ -25,6 +25,41 @@ jobs:
       - name: Install script syntax
         run: bash -n install/install.sh
 
+  mcp:
+    name: MCP server (tests against a mock app, contract with OpenAPI, .mcpb pack)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mcp
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mcp/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: mkdir -p ../dist-release && npm run bundle
+      - run: node dist/server.js --version
+
+  rust:
+    name: Control API unit tests (Rust)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+      - name: Placeholder sidecar and web bundle so the crate builds
+        run: |
+          mkdir -p src-tauri/binaries dist
+          touch src-tauri/binaries/ffmpeg-aarch64-apple-darwin && chmod +x src-tauri/binaries/ffmpeg-aarch64-apple-darwin
+          echo '<html></html>' > dist/index.html
+      - run: cargo test --manifest-path src-tauri/Cargo.toml
+
   installers-windows:
     name: PowerShell installer parses
     runs-on: windows-latest

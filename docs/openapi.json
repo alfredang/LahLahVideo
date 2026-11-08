@@ -1,0 +1,564 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "LahLah Video local API",
+    "version": "1.1.0",
+    "description": "Drive the running LahLah Video editor from scripts, LahLah Voice or Claude (via the MCP server). Listens on 127.0.0.1 only, on a random port. Read the port and key from control.json in the app-data folder, or copy them from Settings › API. Every edit goes through the editor's undo history."
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:{port}",
+      "variables": {
+        "port": {
+          "default": "0",
+          "description": "From control.json or Settings › API"
+        }
+      }
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "The API key from Settings › API (also accepted as X-API-Key)."
+      }
+    }
+  },
+  "security": [
+    {
+      "bearer": []
+    }
+  ],
+  "paths": {
+    "/v1/health": {
+      "get": {
+        "operationId": "health",
+        "summary": "Is the app up? Answered without touching the editor.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or wrong API key"
+          },
+          "403": {
+            "description": "API control is off in Settings › API"
+          }
+        }
+      }
+    },
+    "/v1/status": {
+      "get": {
+        "operationId": "status",
+        "summary": "Version, open project, duration, canvas and API info.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or wrong API key"
+          },
+          "403": {
+            "description": "API control is off in Settings › API"
+          }
+        }
+      }
+    },
+    "/v1/handoff": {
+      "post": {
+        "operationId": "open_handoff",
+        "summary": "Open a lahlah-edit/1 hand-off (file path or inline JSON) or a .lahlah project.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "description": "Absolute path to lahlah-edit.json or a .lahlah project"
+                  },
+                  "json": {
+                    "description": "The hand-off itself, as an object or a JSON string"
+                  }
+                }
+              }
+            }
+          },
+          "description": "Send path or json"
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or wrong API key"
+          },
+          "403": {
+            "description": "API control is off in Settings › API"
+          }
+        }
+      }
+    },
+    "/v1/clips": {
+      "post": {
+        "operationId": "add_clips",
+        "summary": "Download Higgsfield result URLs or import local files into the media bin and the timeline.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "sources": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "https:// URLs or absolute file paths, in order"
+                  },
+                  "track": {
+                    "type": "string",
+                    "enum": [
+                      "main",
+                      "overlay",
+                      "music",
+                      "voice",
+                      "audio",
+                      "none"
+                    ],
+                    "description": "Default: main for video/images, music for audio. none = media bin only"
+                  },
+                  "at": {
+                    "type": "number",
+                    "description": "Start time in seconds (non-main tracks)"
+                  }
+                },
+                "required": [
+                  "sources"
+                ]
+              }
+            }
+          },
+          "description": ""
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or wrong API key"
+          },
+          "403": {
+            "description": "API control is off in Settings › API"
+          }
+        }
+      }
+    },
+    "/v1/commands": {
+      "post": {
+        "operationId": "run_command",
+        "summary": "Run a plain-English editing command, the same parser as the command bar.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "example": "split at 3 seconds"
+                  }
+                },
+                "required": [
+                  "text"
+                ]
+              }
+            }
+          },
+          "description": ""
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or wrong API key"
+          },
+          "403": {
+            "description": "API control is off in Settings › API"
+          }
+        }
+      }
+    },
+    "/v1/timeline": {
+      "get": {
+        "operationId": "get_timeline",
+        "summary": "Tracks, clips, captions and durations as JSON.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or wrong API key"
+          },
+          "403": {
+            "description": "API control is off in Settings › API"
+          }
+        }
+      }
+    },
+    "/v1/captions": {
+      "put": {
+        "operationId": "set_captions",
+        "summary": "Replace the Captions track from SRT text or a list of {start,end,text}.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "srt": {
+                    "type": "string"
+                  },
+                  "captions": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "start": {
+                          "type": "number"
+                        },
+                        "end": {
+                          "type": "number"
+                        },
+                        "text": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "start",
+                        "end",
+                        "text"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "description": ""
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or wrong API key"
+          },
+          "403": {
+            "description": "API control is off in Settings › API"
+          }
+        }
+      }
+    },
+    "/v1/exports": {
+      "post": {
+        "operationId": "export",
+        "summary": "Start an MP4 export. Returns a job id at once; poll /v1/exports/{id}.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "preset": {
+                    "type": "string",
+                    "enum": [
+                      "tiktok",
+                      "youtube_shorts",
+                      "youtube"
+                    ]
+                  },
+                  "resolution": {
+                    "type": "string",
+                    "enum": [
+                      "720p",
+                      "1080p",
+                      "4k"
+                    ]
+                  },
+                  "fps": {
+                    "type": "integer",
+                    "enum": [
+                      24,
+                      30,
+                      60
+                    ]
+                  },
+                  "path": {
+                    "type": "string",
+                    "description": "Output .mp4 path. Default: Movies/LahLah Video (Mac) or Videos\\LahLah Video (Windows)"
+                  }
+                },
+                "required": [
+                  "preset"
+                ]
+              }
+            }
+          },
+          "description": ""
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or wrong API key"
+          },
+          "403": {
+            "description": "API control is off in Settings › API"
+          }
+        }
+      }
+    },
+    "/v1/exports/{id}": {
+      "get": {
+        "operationId": "export_status",
+        "summary": "Progress (0..1), state and output path of an export job.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or wrong API key"
+          },
+          "403": {
+            "description": "API control is off in Settings › API"
+          }
+        }
+      }
+    },
+    "/v1/projects": {
+      "get": {
+        "operationId": "list_projects",
+        "summary": "The open project and recent .lahlah files.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or wrong API key"
+          },
+          "403": {
+            "description": "API control is off in Settings › API"
+          }
+        }
+      }
+    },
+    "/v1/projects/save": {
+      "post": {
+        "operationId": "save_project",
+        "summary": "Save the open project (to path, its own file, or Documents/LahLah Video).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "description": ""
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or wrong API key"
+          },
+          "403": {
+            "description": "API control is off in Settings › API"
+          }
+        }
+      }
+    },
+    "/v1/snapshot": {
+      "get": {
+        "operationId": "snapshot",
+        "summary": "A PNG of one frame, rendered by the export engine. Returns {mimeType, base64, time, width, height}.",
+        "parameters": [
+          {
+            "name": "t",
+            "in": "query",
+            "schema": {
+              "type": "number"
+            },
+            "description": "Seconds; default the playhead"
+          },
+          {
+            "name": "width",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Default 540"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or wrong API key"
+          },
+          "403": {
+            "description": "API control is off in Settings › API"
+          }
+        }
+      }
+    }
+  }
+}
