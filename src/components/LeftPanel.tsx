@@ -361,7 +361,7 @@ function ClaudePanel() {
 }
 
 function AudioTab() {
-  const media = useStore((s) => s.project.media.filter((m) => m.kind === "audio"));
+  const media = useStore((s) => s.project.media).filter((m) => m.kind === "audio");
   const rec = useRecorder();
   return (
     <div className="tab">

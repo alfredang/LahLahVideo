@@ -18,3 +18,9 @@ topic-to-video/public/scene_*.vtt
 topic-to-video/public/plan.json
 topic-to-video/.remotion/
 dist-release/
+
+# Distribution archives (rebuildable — never pushed to GitHub)
+*.zip
+
+# Source material the project was derived from — not ours to republish.
+**/reference/

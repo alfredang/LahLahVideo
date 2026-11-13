@@ -1,6 +1,6 @@
 // Tiny global store with undo/redo. Project edits go through apply(); the playhead
 // lives in its own clock store so 60 fps playback does not re-render the whole app.
-import { useSyncExternalStore } from "react";
+import { useRef, useSyncExternalStore } from "react";
 import { Project } from "./types";
 import { newProject, totalDuration } from "./project";
 import { unlockAllMedia } from "./mediaUnlock";
@@ -72,11 +72,35 @@ export const store = makeStore<State>({
 
 export const clock = makeStore<{ t: number; playing: boolean }>({ t: 0, playing: false });
 
+/**
+ * Memoise a selector on (state, selector) so a selector that builds a new array or object
+ * (`s.project.media.filter(...)`) returns the SAME value until the state changes.
+ * useSyncExternalStore needs a stable snapshot; a fresh value on every read makes React
+ * re-render forever and the app freezes (the Audio tab did exactly this in v1.1.2).
+ */
+export function cachedSnapshot<S, T>(get: () => S) {
+  let last: { s: S; sel: (s: S) => T; v: T } | null = null;
+  return (sel: (s: S) => T): T => {
+    const s = get();
+    if (last && last.s === s && last.sel === sel) return last.v;
+    const v = sel(s);
+    last = { s, sel, v };
+    return v;
+  };
+}
+
+function useSelector<S, T>(src: { get: () => S; subscribe: (l: Listener) => () => void }, sel: (s: S) => T): T {
+  const read = useRef<((sel: (s: S) => T) => T) | null>(null);
+  if (!read.current) read.current = cachedSnapshot<S, T>(src.get);
+  const r = read.current;
+  return useSyncExternalStore(src.subscribe, () => r(sel));
+}
+
 export function useStore<T>(sel: (s: State) => T): T {
-  return useSyncExternalStore(store.subscribe, () => sel(store.get()));
+  return useSelector(store, sel);
 }
 export function useClock<T>(sel: (c: { t: number; playing: boolean }) => T): T {
-  return useSyncExternalStore(clock.subscribe, () => sel(clock.get()));
+  return useSelector(clock, sel);
 }
 
 const HISTORY = 100;

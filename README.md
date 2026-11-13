@@ -13,6 +13,13 @@ A free, CapCut-style video editor for Mac and Windows, from the makers of [LahLa
 ![Mac and Windows](https://img.shields.io/badge/Mac%20%7C%20Windows-desktop-2dd4bf)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
+**Install:**
+[![Install on Mac (Apple silicon)](https://img.shields.io/badge/Install_on_Mac-Apple_silicon-111111?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/alfredang/LahLahVideo/releases/latest/download/LahLahVideo_aarch64.dmg)
+[![Install on Mac (Intel)](https://img.shields.io/badge/Install_on_Mac-Intel-555555?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/alfredang/LahLahVideo/releases/latest/download/LahLahVideo_x64.dmg)
+[![Install on Windows](https://img.shields.io/badge/Install_on_Windows-10_%2F_11-0078D4?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/alfredang/LahLahVideo/releases/latest/download/LahLahVideo_x64-setup.exe)
+
+<sub>Direct downloads of the newest release. Not sure which Mac you have? Apple menu › About This Mac: "Apple M…" means Apple silicon. Or use the [1-minute install](#1-minute-install) line, which picks for you.</sub>
+
 </div>
 
 ![LahLah Video: media bin on the left, player in the middle, Details on the right, timeline below, with a Kopi & Coins edit loaded from Claude's hand-off](docs/screenshot-editor.png)
@@ -64,9 +71,9 @@ Claude checks your OS, shows you the one command, runs it, and confirms the LahL
 ### Manual install
 
 1. Open the [latest release](https://github.com/alfredang/LahLahVideo/releases/latest) and download one file:
-   - `…_aarch64.dmg` for Macs with Apple silicon (M1 to M4 and later)
-   - `…_x64.dmg` for Intel Macs
-   - `…_x64-setup.exe` for Windows
+   - [`LahLahVideo_aarch64.dmg`](https://github.com/alfredang/LahLahVideo/releases/latest/download/LahLahVideo_aarch64.dmg) for Macs with Apple silicon (M1 to M4 and later)
+   - [`LahLahVideo_x64.dmg`](https://github.com/alfredang/LahLahVideo/releases/latest/download/LahLahVideo_x64.dmg) for Intel Macs
+   - [`LahLahVideo_x64-setup.exe`](https://github.com/alfredang/LahLahVideo/releases/latest/download/LahLahVideo_x64-setup.exe) for Windows
 2. **Mac:** open the `.dmg`, drag **LahLah Video** into **Applications**. The first launch shows *"Apple could not verify LahLah Video"*. Click **Done**, open **System Settings → Privacy & Security**, scroll down and click **Open Anyway**. (Or run `xattr -dr com.apple.quarantine "/Applications/LahLah Video.app"` in Terminal.)
 3. **Windows:** run the `.exe`. If *"Windows protected your PC"* appears, click **More info → Run anyway**.
 
