@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "LahLah Video local API",
-    "version": "1.1.4",
+    "version": "1.1.5",
     "description": "Drive the running LahLah Video editor from scripts, LahLah Voice or Claude (via the MCP server). Listens on 127.0.0.1 only, on a random port. Read the port and key from control.json in the app-data folder, or copy them from Settings › API. Every edit goes through the editor's undo history."
   },
   "servers": [

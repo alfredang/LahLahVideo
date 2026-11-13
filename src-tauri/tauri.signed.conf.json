@@ -1,0 +1,7 @@
+{
+  "bundle": {
+    "macOS": {
+      "signingIdentity": "Developer ID Application: Alfred Ang (GU9WTSTX9M)"
+    }
+  }
+}

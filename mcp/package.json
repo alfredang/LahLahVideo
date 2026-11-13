@@ -1,6 +1,6 @@
 {
   "name": "lahlah-video-mcp",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "description": "MCP server that lets Claude drive the LahLah Video editor: open Claude's Higgsfield hand-off, run edit commands, export for TikTok or YouTube.",
   "license": "MIT",
   "author": "Dr Alfred Ang, Tertiary Infotech Academy",

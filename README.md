@@ -74,10 +74,10 @@ Claude checks your OS, shows you the one command, runs it, and confirms the LahL
    - [`LahLahVideo_aarch64.dmg`](https://github.com/alfredang/LahLahVideo/releases/latest/download/LahLahVideo_aarch64.dmg) for Macs with Apple silicon (M1 to M4 and later)
    - [`LahLahVideo_x64.dmg`](https://github.com/alfredang/LahLahVideo/releases/latest/download/LahLahVideo_x64.dmg) for Intel Macs
    - [`LahLahVideo_x64-setup.exe`](https://github.com/alfredang/LahLahVideo/releases/latest/download/LahLahVideo_x64-setup.exe) for Windows
-2. **Mac:** open the `.dmg`, drag **LahLah Video** into **Applications**. The first launch shows *"Apple could not verify LahLah Video"*. Click **Done**, open **System Settings → Privacy & Security**, scroll down and click **Open Anyway**. (Or run `xattr -dr com.apple.quarantine "/Applications/LahLah Video.app"` in Terminal.)
+2. **Mac:** open the `.dmg` and drag **LahLah Video** into **Applications**. The app is signed and notarized by Apple (from v1.1.5), so it opens straight away.
 3. **Windows:** run the `.exe`. If *"Windows protected your PC"* appears, click **More info → Run anyway**.
 
-The app is not yet signed with paid Apple and Microsoft certificates, so both systems ask once. The install scripts skip that step for you.
+The Mac app is signed with an Apple Developer ID and notarized. The Windows installer is not signed yet, so Windows asks once; the install script skips that step for you.
 
 ## What you can do
 
@@ -269,7 +269,7 @@ The original LahLahVideo pipeline (type a topic, Claude writes the script, Edge 
 
 | Problem | Fix |
 |---|---|
-| Mac: *"LahLah Video is damaged"* or *"cannot be verified"* | Run `xattr -dr com.apple.quarantine "/Applications/LahLah Video.app"`, or use System Settings → Privacy & Security → **Open Anyway**. |
+| Mac: *"LahLah Video is damaged"* or *"cannot be verified"* | Versions before v1.1.5 were not notarized: install the latest. For an old copy, run `xattr -dr com.apple.quarantine "/Applications/LahLah Video.app"`, or use System Settings → Privacy & Security → **Open Anyway**. |
 | Windows: *"Windows protected your PC"* | **More info → Run anyway.** The install script avoids this. |
 | Windows: the window stays blank | Install the [Microsoft Edge WebView2 runtime](https://developer.microsoft.com/microsoft-edge/webview2/) (built into Windows 11). |
 | `curl: command not found` on Windows | You're in Command Prompt. Use **PowerShell** and the `irm … \| iex` line. |

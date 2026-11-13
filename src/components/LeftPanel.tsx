@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { apply, clock, LeftTab, project, setUI, store, useStore } from "../lib/store";
+import { apply, clock, LeftTab, pause, project, seek, setUI, store, useStore } from "../lib/store";
 import { AspectId, Clip, MediaItem, TransitionType } from "../lib/types";
 import {
   addCaption,
@@ -82,6 +82,26 @@ export function LeftPanel() {
  * Drag a media card onto a timeline track. Pointer events rather than HTML5 drag-and-drop,
  * because the desktop window's file-drop handler blocks HTML5 drags on Windows.
  */
+let draggedAt = 0;
+
+/**
+ * Single click on a media card: if the clip is on the timeline, jump the Player to it and select
+ * it (so you can see which shot S03.mp4 is); otherwise say how to add it.
+ */
+function showMedia(m: MediaItem) {
+  if (Date.now() - draggedAt < 300) return;
+  const clip = project()
+    .clips.filter((c) => c.mediaId === m.id)
+    .sort((a, b) => a.start - b.start)[0];
+  if (!clip) {
+    toast(`${m.name} is not on the timeline yet. Drag it down, double-click it, or click +.`);
+    return;
+  }
+  pause();
+  seek(clip.start + 0.05);
+  setUI({ selectedId: clip.id });
+}
+
 function startMediaDrag(e: React.PointerEvent, m: MediaItem) {
   if (e.button !== 0 || (e.target as HTMLElement).closest("button")) return;
   const x0 = e.clientX;
@@ -106,6 +126,7 @@ function startMediaDrag(e: React.PointerEvent, m: MediaItem) {
     document.querySelectorAll(".tl-lane.drop-target").forEach((el) => el.classList.remove("drop-target"));
     if (!ghost) return;
     ghost.remove();
+    draggedAt = Date.now();
     const lane = document.elementFromPoint(ev.clientX, ev.clientY)?.closest("[data-track]") as HTMLElement | null;
     if (!lane) return;
     const p = project();
@@ -125,8 +146,9 @@ function MediaCard({ m, list }: { m: MediaItem; list?: boolean }) {
     <div
       className={`media-card ${list ? "list" : ""}`}
       onPointerDown={(e) => startMediaDrag(e, m)}
+      onClick={(e) => !(e.target as HTMLElement).closest("button") && showMedia(m)}
       onDoubleClick={() => addToTimeline(m.id)}
-      title={`${m.name}\nDrag onto the timeline, or click + to add it at the playhead`}
+      title={used ? `${m.name}\nClick to show it in the Player. Drag or click + to add it again.` : `${m.name}\nDrag onto the timeline, double-click, or click + to add it at the playhead`}
     >
       <div
         className={`media-thumb ${m.kind}`}
