@@ -145,8 +145,8 @@ function MediaCard({ m, list }: { m: MediaItem; list?: boolean }) {
         )}
         {!m.thumb && <Icon name={m.kind === "audio" ? "music" : "media"} size={28} />}
         {m.kind !== "image" && <span className="dur">{fmtTime(m.duration)}</span>}
-        {m.origin === "higgsfield" || m.origin === "handoff" ? <span className="badge">HF</span> : null}
-        {used && <span className="used" title="On the timeline">✓</span>}
+        {m.origin === "higgsfield" || m.origin === "handoff" ? <span className="badge" title="A Higgsfield clip (from Claude's hand-off or a Higgsfield link)">HF</span> : null}
+        {used && <span className="used" title="Already on the timeline">✓</span>}
       </div>
       <div className="media-name">{m.name}</div>
       <button type="button" className="add-plus" title="Add to the timeline at the playhead" onClick={() => addAtPlayhead(m.id)}>
@@ -196,6 +196,8 @@ function YoursPanel() {
   const [view, setView] = useState<"grid" | "list">("grid");
   const [sort, setSort] = useState<"added" | "name" | "length">("added");
   const [kind, setKind] = useState<"all" | "video" | "image" | "audio">("all");
+  const clips = useStore((s) => s.project.clips);
+  const usedIds = new Set(clips.map((c) => c.mediaId));
   if (!media.length) {
     return (
       <div className="media-empty">
@@ -234,19 +236,33 @@ function YoursPanel() {
         <button type="button" className="mini" title={view === "grid" ? "List view" : "Grid view"} onClick={() => setView(view === "grid" ? "list" : "grid")}>
           <Icon name={view === "grid" ? "list" : "grid"} size={16} />
         </button>
-        <select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)} title="Sort">
-          <option value="added">Added</option>
-          <option value="name">Name</option>
-          <option value="length">Length</option>
+        <select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)} title="Sort the media" aria-label="Sort">
+          <option value="added">Sort: order added</option>
+          <option value="name">Sort: name A–Z</option>
+          <option value="length">Sort: longest first</option>
         </select>
-        <select value={kind} onChange={(e) => setKind(e.target.value as typeof kind)} title="Show">
-          <option value="all">All</option>
-          <option value="video">Video</option>
-          <option value="image">Photos</option>
-          <option value="audio">Audio</option>
+        <select value={kind} onChange={(e) => setKind(e.target.value as typeof kind)} title="Show only one kind of file" aria-label="Show">
+          <option value="all">Show: all files</option>
+          <option value="video">Show: videos</option>
+          <option value="image">Show: photos</option>
+          <option value="audio">Show: audio</option>
         </select>
       </div>
-      <div className="crumb">All{kind !== "all" ? ` / ${kind}` : ""}</div>
+      <div className="crumb">
+        {items.length === media.length ? `${media.length} ${media.length === 1 ? "file" : "files"}` : `${items.length} of ${media.length} files`}
+        {media.some((m) => m.origin === "higgsfield" || m.origin === "handoff") && (
+          <>
+            {" · "}
+            <span className="badge inline">HF</span> from Higgsfield
+          </>
+        )}
+        {media.some((m) => usedIds.has(m.id)) && (
+          <>
+            {" · "}
+            <span className="used inline">✓</span> on the timeline
+          </>
+        )}
+      </div>
       <div className={view === "grid" ? "media-grid" : "media-list"}>
         {items.map((m) => (
           <MediaCard key={m.id} m={m} list={view === "list"} />

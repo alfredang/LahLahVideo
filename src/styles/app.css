@@ -140,7 +140,10 @@ input[type="checkbox"], input[type="range"] { accent-color: var(--ember); }
 .media-toolbar select { width: auto; padding: 4px 6px; font-size: 12px; }
 .search { flex: 1; display: flex; align-items: center; gap: 6px; background: var(--card); border: 1px solid var(--hairline-strong); border-radius: var(--radius-item); padding: 0 8px; color: var(--muted); min-width: 60px; }
 .search input { border: none; outline: none; background: transparent; padding: 6px 0; width: 100%; font-size: 12.5px; }
-.crumb { font-size: 12px; color: var(--muted); margin-top: 8px; text-transform: capitalize; }
+.crumb { font-size: 12px; color: var(--muted); margin-top: 8px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.crumb .inline { display: inline-grid; place-items: center; font-weight: 700; font-size: 10px; line-height: 1; }
+.crumb .badge.inline { background: var(--ember); color: var(--ink); padding: 2px 5px; border-radius: 4px; }
+.crumb .used.inline { background: #fff; color: var(--ok); width: 16px; height: 16px; border-radius: 50%; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2); }
 .scrub-line { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--ember); pointer-events: none; }
 .scrub-time { position: absolute; left: 4px; bottom: 4px; background: rgba(28, 27, 25, 0.78); color: #fff; font-size: 10px; padding: 0 4px; border-radius: 3px; }
 .ratio.r1x1 { width: 30px; height: 30px; margin: 4px 0; }

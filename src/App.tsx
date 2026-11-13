@@ -22,6 +22,7 @@ import { runText } from "./commands/execute";
 import { installNativeMenu } from "./lib/menu";
 import { parseDeepLink } from "./lib/deeplink";
 import { toast } from "./lib/toast";
+import { startThumbWatcher } from "./lib/thumbs";
 
 /** lahlahvideo://command?text=...  or  lahlahvideo://open?file=... */
 export function handleDeepLink(url: string) {
@@ -51,6 +52,7 @@ function isTyping(e: KeyboardEvent) {
 }
 
 function useKeyboard() {
+  useEffect(() => startThumbWatcher(), []);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const mod = e.metaKey || e.ctrlKey;

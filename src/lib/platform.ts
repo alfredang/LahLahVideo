@@ -190,9 +190,19 @@ export async function cacheDir(sub: string): Promise<string> {
   return dir;
 }
 
-async function ffmpegThumb(path: string): Promise<string | undefined> {
+/** Stable cache name per source file, so a thumbnail survives save/reopen and is made once. */
+function thumbName(path: string): string {
+  let h = 2166136261;
+  for (let i = 0; i < path.length; i++) h = Math.imul(h ^ path.charCodeAt(i), 16777619);
+  return `th-${(h >>> 0).toString(36)}.jpg`;
+}
+
+/** A small JPEG frame of a video file (desktop only), cached under app cache/thumbs. */
+export async function ffmpegThumb(path: string): Promise<string | undefined> {
   const { join } = await import("@tauri-apps/api/path");
-  const out = await join(await cacheDir("thumbs"), `${uid("th")}.jpg`);
+  const out = await join(await cacheDir("thumbs"), thumbName(path));
+  const { exists } = await import("@tauri-apps/plugin-fs");
+  if (await exists(out).catch(() => false)) return convertFileSrc(out);
   const h = await runFfmpeg(["-hide_banner", "-y", "-ss", "0.5", "-i", path, "-frames:v", "1", "-vf", "scale=240:-2", out]);
   const r = await h.done;
   if (r.code !== 0) {
